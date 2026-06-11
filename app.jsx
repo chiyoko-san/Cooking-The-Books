@@ -429,6 +429,29 @@ function App() {
 
   useEffect(() => { loadHistory().then(setHistory); loadLibrary().then(setLibrary); loadMine().then(setMine); }, []);
 
+  // ---- ブラウザの戻る/進む対応 ----
+  // route が変わったら履歴に積む。popstate(戻る)で route を復元。
+  const popping = useRef(false);
+  useEffect(() => {
+    // 初期状態を置き換え
+    window.history.replaceState({ route: "home" }, "");
+    const onPop = (e) => {
+      popping.current = true;
+      const r = (e.state && e.state.route) || "home";
+      setRoute(r);
+      // tipが開いていたら閉じる
+      setTip(null);
+    };
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
+  useEffect(() => {
+    if (popping.current) { popping.current = false; return; }
+    // home以外への遷移を履歴に積む（連続重複は避ける）
+    const cur = window.history.state && window.history.state.route;
+    if (cur !== route) window.history.pushState({ route }, "");
+  }, [route]);
+
   // URLの#play=... があれば、その出題を自動で審査開始
   useEffect(() => {
     const hc = readHashCode();
@@ -502,7 +525,10 @@ function App() {
     };
     const codeStr = enc(payload);
     setCode(codeStr);
-    addToMine(codeStr, { title: payload.title, companyCount: companies.length, hasFx: companies.some((c) => c.currency !== "JPY"), periodCount, clean: isClean }).then(setMine);
+    const meta = { title: payload.title, companyCount: companies.length, hasFx: companies.some((c) => c.currency !== "JPY"), periodCount, clean: isClean };
+    addToMine(codeStr, meta).then(setMine);
+    // 自分でも挑戦できるよう調査一覧にも追加
+    addToLibrary(codeStr, meta).then(({ list }) => setLibrary(list));
     setRoute("share");
   }
   async function addCode(raw) {
@@ -595,7 +621,7 @@ function App() {
           <Investigate data={loaded} accusations={accusations} setAccusations={setAccusations}
             accuseCircular={accuseCircular} setAccuseCircular={setAccuseCircular} accuseFx={accuseFx} toggleFxAccuse={toggleFxAccuse} onSubmit={grade} onTip={setTip} />
         )}
-        {route === "result" && result && <Result result={result} onHome={() => setRoute("home")} onLibrary={() => setRoute("library")} />}
+        {route === "result" && result && <Result result={result} onHome={() => setRoute("home")} onLibrary={() => setRoute("library")} onTip={setTip} />}
       </div>
 
       {tip && <TipModal tip={tip} onClose={() => setTip(null)} />}
@@ -1494,7 +1520,70 @@ function Chip({ label, v, unit, warn }) {
 }
 
 // ================================================================
-function Result({ result, onHome, onLibrary }) {
+// ================================================================
+//  結果のおさらい解説: 各架空科目について「指標の動き＋見抜き方」を生成
+// ================================================================
+function explainFake(company, key) {
+  const f = curFin(company);
+  const ind = INDUSTRIES[company.industry];
+  const r = ratios(f);
+  const round = (n) => Math.round(n);
+  // 科目ごとの解説テンプレ(指標の実測値を埋め込む)
+  switch (key) {
+    case "sales":
+      return {
+        what: "架空の売上を計上して、会社を大きく・好調に見せようとした手口です。",
+        how: `売上を水増しすると、その分の入金が無いため売掛金だけが不自然に膨らみます。`,
+        signal: `売掛金回転日数が ${round(r.recvDays)}日（${ind.name}の目安は ${ind.recvDays[0]}〜${ind.recvDays[1]}日）。「売れているのに代金が入っていない」のが架空売上のサイン。`,
+      };
+    case "receivables":
+      return {
+        what: "回収できない（実在しない取引の）売掛金を計上した手口です。",
+        how: "架空売上の受け皿として、売掛金が売上の伸び以上に積み上がります。",
+        signal: `売掛金回転日数 ${round(r.recvDays)}日 が業種目安（${ind.recvDays[0]}〜${ind.recvDays[1]}日）を超過。`,
+      };
+    case "cogs":
+      return {
+        what: "売上原価を小さく見せて、利益を水増しした手口です。",
+        how: "本来の原価を在庫に付け替えると、原価率が下がり利益が大きく見えます。",
+        signal: `原価率 ${round(r.cogsRate)}%（${ind.name}の目安は ${ind.cogs[0]}〜${ind.cogs[1]}%）。同時に在庫日数 ${round(r.invDays)}日 も膨らんでいれば、費用隠しの疑いが濃厚。`,
+      };
+    case "inventory":
+      return {
+        what: "在庫を過大に計上した手口です（原価隠しの受け皿、または資産の水増し）。",
+        how: "売れていない在庫が積み上がると、在庫回転日数が異常に長くなります。",
+        signal: `在庫回転日数 ${round(r.invDays)}日（${ind.name}の目安は ${ind.invDays[0]}〜${ind.invDays[1]}日）。在庫が滞留しているサイン。`,
+      };
+    case "extraLoss":
+    case "fixedAssets":
+      return {
+        what: "計上すべき特別損失（資産の価値下落など）を計上せず、資産に残した手口です。",
+        how: "損を認識しないことで利益を守りますが、その分だけ資産が過大になり、貸借が崩れます。",
+        signal: `貸借差額 ${round(r.bsGap)}（資産合計と負債・純資産合計の不一致）。本来あるべき損失が隠れている痕跡。`,
+      };
+    case "tax":
+      return {
+        what: "納めるべき法人税を小さく見せて、最終利益を膨らませた手口です。",
+        how: "利益が出ているのに税負担が軽すぎると、実効税率が不自然に低くなります。",
+        signal: `実効税率 ${round(r.taxRate)}%（通常は概ね30%前後）。利益のわりに税が軽すぎる。`,
+      };
+    case "longDebt":
+    case "shortDebt":
+      return {
+        what: "返済義務のある借入金を帳簿から消した手口です（簿外債務）。",
+        how: "負債を消すと、資産と負債・純資産のバランスが取れなくなります。",
+        signal: `貸借差額 ${round(r.bsGap)}。資産に対して負債が不自然に少ないのが隠し債務のサイン。`,
+      };
+    default:
+      return {
+        what: `${A_BY_KEY[key]?.label || key} を不正に操作した手口です。`,
+        how: "数字を実態から動かすと、必ずどこかの指標に痕跡が残ります。",
+        signal: "業種の常識から外れた指標が手がかりです。",
+      };
+  }
+}
+
+function Result({ result, onHome, onLibrary, onTip }) {
   const { score, detail, truth } = result;
   const nameOf = (cid) => truth.companies.find((c) => c.cid === cid)?.name || cid;
   let verdict, vmsg;
@@ -1512,7 +1601,7 @@ function Result({ result, onHome, onLibrary }) {
       <div className="result-detail">{detail.map((d, i) => <div key={i} className={`rd-line ${d.ok ? "ok" : "ng"}`}><span className="rd-icon">{d.ok ? "✓" : "✕"}</span>{d.txt}</div>)}</div>
       <div className="truth-box">
         <div className="truth-title">真相の開示</div>
-        {truth.cleanCo ? <div className="truth-clean">この企業グループは完全に健全だった。架空計上は一切無し。</div> : (
+        {truth.cleanCo ? <div className="truth-clean">この企業グループは完全に健全だった。架空計上は一切無し。むやみに疑わず見抜けたかが勝負どころ。</div> : (
           <>
             {truth.trueFakes.length > 0 ? (
               <ul className="truth-list">{truth.trueFakes.map((f, i) => <li key={i}>{nameOf(f.cid)} の <b>{A_BY_KEY[f.key]?.label || f.key}</b> が架空計上</li>)}</ul>
@@ -1522,6 +1611,52 @@ function Result({ result, onHome, onLibrary }) {
           </>
         )}
       </div>
+
+      {/* おさらい: 理由つき解説 */}
+      {!truth.cleanCo && truth.trueFakes.length > 0 && (
+        <div className="recap-box">
+          <div className="recap-title">📘 おさらい — どこが粉飾で、なぜ見抜けるか</div>
+          {(() => {
+            // 同一(cid,key)の重複を除き、会社ごとにまとめる
+            const seen = new Set();
+            const items = [];
+            for (const fk of truth.trueFakes) {
+              const id = `${fk.cid}:${fk.key}`;
+              if (seen.has(id)) continue; seen.add(id);
+              const co = truth.companies.find((c) => c.cid === fk.cid);
+              if (!co) continue;
+              items.push({ fk, co, ex: explainFake(co, fk.key) });
+            }
+            return items.map((it, i) => (
+              <div className="recap-item" key={i}>
+                <div className="recap-head">
+                  <span className="recap-co">{it.co.name}</span>
+                  <button className="recap-acct" onClick={() => onTip && onTip({ label: A_BY_KEY[it.fk.key]?.label || it.fk.key, desc: A_BY_KEY[it.fk.key]?.desc || "" })}>
+                    {A_BY_KEY[it.fk.key]?.label || it.fk.key} <span className="recap-q">?</span>
+                  </button>
+                </div>
+                <div className="recap-row"><span className="recap-tag what">手口</span>{it.ex.what}</div>
+                <div className="recap-row"><span className="recap-tag how">なぜ崩れる</span>{it.ex.how}</div>
+                <div className="recap-row"><span className="recap-tag signal">見抜き方</span>{it.ex.signal}</div>
+              </div>
+            ));
+          })()}
+          {truth.trueFx && truth.trueFx.length > 0 && (
+            <div className="recap-item">
+              <div className="recap-head"><span className="recap-co">{truth.trueFx.map(nameOf).join("・")}</span><span className="recap-acct">為替操作</span></div>
+              <div className="recap-row"><span className="recap-tag what">手口</span>海外子会社の換算レートを市場相場より不当に高くして、円換算後の利益を膨らませる手口です。</div>
+              <div className="recap-row"><span className="recap-tag signal">見抜き方</span>各社の換算レートと「市場目安レート」の乖離率を確認。大きく外れていれば為替粉飾の疑い。</div>
+            </div>
+          )}
+          {truth.trueCircular && (
+            <div className="recap-item">
+              <div className="recap-head"><span className="recap-co">グループ内部取引</span><span className="recap-acct">循環取引</span></div>
+              <div className="recap-row"><span className="recap-tag what">手口</span>グループ会社どうしで商品を回し、実体のない売上を水増しする手口です。</div>
+              <div className="recap-row"><span className="recap-tag signal">見抜き方</span>内部取引の計上額が実際の取引額より大きいと循環取引。連結では消去されるはずの売上が手がかり。</div>
+            </div>
+          )}
+        </div>
+      )}
       <div className="btn-row">
         <button className="btn primary" onClick={onLibrary}>調査一覧へ戻る</button>
         <button className="btn ghost" onClick={onHome}>トップへ</button>
