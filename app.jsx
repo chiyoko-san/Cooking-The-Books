@@ -1,8 +1,8 @@
 const { useState, useMemo, useRef, useEffect } = React;
 
 // ブラウザ単体(GitHub Pages)で動かすためのストレージ＆共有リンク基盤
-// storage が無い環境では localStorage を使うシムを提供
-const storage = (storage && typeof storage.get === "function") ? storage : {
+// window.storage が無い環境では localStorage を使うシムを提供
+const storage = (typeof window !== "undefined" && window.storage && typeof window.storage.get === "function") ? window.storage : {
   async get(key) { const v = localStorage.getItem(key); return v == null ? null : { key, value: v }; },
   async set(key, value) { localStorage.setItem(key, value); return { key, value }; },
   async delete(key) { localStorage.removeItem(key); return { key, deleted: true }; },
