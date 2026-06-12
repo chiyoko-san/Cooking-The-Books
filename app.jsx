@@ -1,5 +1,66 @@
 const { useState, useMemo, useRef, useEffect } = React;
 
+// ================================================================
+//  Firebase 連携（ログイン＋クラウド成績＋ランキング）
+//  ※ window.FIREBASE_CONFIG が設定されていれば有効。未設定なら
+//    自動的に「端末内モード」で動作する（ログイン無しでも遊べる）。
+// ================================================================
+const FB = (() => {
+  const cfg = (typeof window !== "undefined") ? window.FIREBASE_CONFIG : null;
+  const ready = !!(cfg && cfg.apiKey && window.firebase && window.firebase.initializeApp);
+  let auth = null, db = null;
+  if (ready) {
+    try {
+      if (!window.firebase.apps || !window.firebase.apps.length) window.firebase.initializeApp(cfg);
+      auth = window.firebase.auth();
+      db = window.firebase.firestore();
+    } catch (e) { console.warn("Firebase init failed:", e); return { enabled: false }; }
+  }
+  return { enabled: ready, auth, db, fb: window.firebase };
+})();
+
+// 認証ヘルパー
+const cloud = {
+  enabled: FB.enabled,
+  onAuth(cb) { if (!FB.enabled) { cb(null); return () => {}; } return FB.auth.onAuthStateChanged(cb); },
+  async signInEmail(email, pw) { return FB.auth.signInWithEmailAndPassword(email, pw); },
+  async registerEmail(email, pw) { return FB.auth.createUserWithEmailAndPassword(email, pw); },
+  async signInGoogle() { const p = new FB.fb.auth.GoogleAuthProvider(); return FB.auth.signInWithPopup(p); },
+  async signOut() { return FB.auth.signOut(); },
+  // プロフィール（表示名）保存・取得
+  async getProfile(uid) { try { const d = await FB.db.collection("users").doc(uid).get(); return d.exists ? d.data() : null; } catch { return null; } },
+  async setDisplayName(uid, name) { try { await FB.db.collection("users").doc(uid).set({ displayName: name }, { merge: true }); } catch {} },
+  // 成績の集計ドキュメントを更新（1ユーザー1ドキュメント）
+  async pushResult(uid, displayName, rec) {
+    if (!FB.enabled || !uid) return;
+    const ref = FB.db.collection("stats").doc(uid);
+    try {
+      await FB.db.runTransaction(async (tx) => {
+        const snap = await tx.get(ref);
+        const cur = snap.exists ? snap.data() : { attempts: 0, wins: 0, draws: 0, loses: 0, totalFakes: 0, totalHits: 0, scoreSum: 0 };
+        cur.attempts += 1;
+        cur.wins += rec.result === "win" ? 1 : 0;
+        cur.draws += rec.result === "draw" ? 1 : 0;
+        cur.loses += rec.result === "lose" ? 1 : 0;
+        cur.totalFakes += rec.fakeTotal || 0;
+        cur.totalHits += rec.hits || 0;
+        cur.scoreSum += rec.score || 0;
+        cur.displayName = displayName || cur.displayName || "匿名";
+        cur.updatedAt = Date.now();
+        tx.set(ref, cur, { merge: true });
+      });
+    } catch (e) { console.warn("pushResult failed", e); }
+  },
+  async getMyStats(uid) { if (!FB.enabled || !uid) return null; try { const d = await FB.db.collection("stats").doc(uid).get(); return d.exists ? d.data() : null; } catch { return null; } },
+  async getRanking(limit = 20) {
+    if (!FB.enabled) return [];
+    try {
+      const q = await FB.db.collection("stats").orderBy("wins", "desc").limit(limit).get();
+      return q.docs.map((d) => ({ uid: d.id, ...d.data() }));
+    } catch (e) { console.warn("ranking failed", e); return []; }
+  },
+};
+
 // ブラウザ単体(GitHub Pages)で動かすためのストレージ＆共有リンク基盤
 // window.storage が無い環境では localStorage を使うシムを提供
 const storage = (typeof window !== "undefined" && window.storage && typeof window.storage.get === "function") ? window.storage : {
@@ -432,8 +493,20 @@ function App() {
   const [library, setLibrary] = useState([]);
   const [mine, setMine] = useState([]);
   const [tip, setTip] = useState(null); // 科目説明ポップアップ {label, desc}
+  const [user, setUser] = useState(null);       // Firebaseログインユーザー
+  const [profile, setProfile] = useState(null); // {displayName}
 
   useEffect(() => { loadHistory().then(setHistory); loadLibrary().then(setLibrary); loadMine().then(setMine); }, []);
+
+  // ログイン状態を監視
+  useEffect(() => {
+    const unsub = cloud.onAuth(async (u) => {
+      setUser(u || null);
+      if (u) { const p = await cloud.getProfile(u.uid); setProfile(p || { displayName: u.displayName || (u.email ? u.email.split("@")[0] : "匿名") }); }
+      else setProfile(null);
+    });
+    return () => unsub && unsub();
+  }, []);
 
   // ---- ブラウザの戻る/進む対応 ＋ クリーンURL同期 ----
   // route が変わったら履歴に積む。popstate(戻る)で route を復元。
@@ -605,6 +678,8 @@ function App() {
     setResult({ score, detail, truth, hits, fakeTotal, perfect });
     const rec = { id: uid(), title: o.title || "出題", ts: Date.now(), cleanCo: !!o.clean, fakeTotal, hits, score, result: score >= 10 ? "win" : score >= -5 ? "draw" : "lose" };
     setHistory(await saveHistoryRecord(rec));
+    // ログイン中ならクラウドにも集計を反映
+    if (user) { cloud.pushResult(user.uid, profile && profile.displayName, rec); }
     if (currentLid) {
       const rate = o.clean ? (score >= 0 ? 100 : 0) : (fakeTotal > 0 ? Math.round((hits / fakeTotal) * 100) : 0);
       setLibrary(await recordLibraryAttempt(currentLid, rate, score));
@@ -617,10 +692,19 @@ function App() {
       <div className="wrap">
         <header className="top">
           <div className="brand" onClick={() => setRoute("home")}><span className="brand-mark">¥</span> 連結粉飾 <span className="brand-vs">対局</span></div>
-          <div className="brand-sub">CONSOLIDATED LEDGER DUEL</div>
+          <div className="top-right">
+            <div className="brand-sub">CONSOLIDATED LEDGER DUEL</div>
+            {cloud.enabled && (
+              user
+                ? <button className="acct-chip" onClick={() => setRoute("mypage")}>👤 {(profile && profile.displayName) || "マイページ"}</button>
+                : <button className="acct-chip login" onClick={() => setRoute("login")}>ログイン</button>
+            )}
+          </div>
         </header>
 
-        {route === "home" && <Home history={history} onBuild={() => { resetBuild(); setRoute("build"); }} onLoad={() => { setLoadError(""); setRoute("library"); }} onRules={() => setRoute("rules")} onMine={() => setRoute("mine")} />}
+        {route === "home" && <Home history={history} user={user} profile={profile} onBuild={() => { resetBuild(); setRoute("build"); }} onLoad={() => { setLoadError(""); setRoute("library"); }} onRules={() => setRoute("rules")} onMine={() => setRoute("mine")} onLogin={() => setRoute("login")} onMypage={() => setRoute("mypage")} />}
+        {route === "login" && <Login onBack={() => setRoute("home")} onDone={() => setRoute("mypage")} />}
+        {route === "mypage" && <MyPage user={user} profile={profile} history={history} onBack={() => setRoute("home")} onLogin={() => setRoute("login")} onProfileSaved={setProfile} />}
         {route === "rules" && <Rules onBack={() => setRoute("home")} onTip={setTip} />}
         {route === "build" && (
           <Builder companies={companies} setCompanies={setCompanies} internalTxns={internalTxns} setInternalTxns={setInternalTxns}
@@ -808,7 +892,189 @@ function Rules({ onBack, onTip }) {
 }
 
 // ================================================================
-function Home({ history, onBuild, onLoad, onRules, onMine }) {
+function Login({ onBack, onDone }) {
+  const [mode, setMode] = useState("login"); // login | register
+  const [email, setEmail] = useState("");
+  const [pw, setPw] = useState("");
+  const [err, setErr] = useState("");
+  const [busy, setBusy] = useState(false);
+  if (!cloud.enabled) {
+    return (
+      <div className="screen">
+        <div className="section-head"><h2 className="h2">ログイン</h2></div>
+        <div className="lib-empty">ログイン機能はまだ設定されていません（Firebaseの構成が未登録）。設定すると、メールやGoogleでログインして全端末で成績を共有できます。</div>
+        <div className="btn-row"><button className="btn ghost" onClick={onBack}>戻る</button></div>
+      </div>
+    );
+  }
+  async function submit() {
+    setErr(""); setBusy(true);
+    try {
+      if (mode === "login") await cloud.signInEmail(email.trim(), pw);
+      else await cloud.registerEmail(email.trim(), pw);
+      onDone();
+    } catch (e) { setErr(translateAuthErr(e)); } finally { setBusy(false); }
+  }
+  async function google() {
+    setErr(""); setBusy(true);
+    try { await cloud.signInGoogle(); onDone(); }
+    catch (e) { setErr(translateAuthErr(e)); } finally { setBusy(false); }
+  }
+  return (
+    <div className="screen">
+      <div className="section-head"><h2 className="h2">{mode === "login" ? "ログイン" : "新規登録"}</h2>
+        <p className="muted">ログインすると、成績がクラウドに保存され、どの端末からでもマイページとランキングが見られます。</p></div>
+      <div className="auth-card">
+        <button className="btn google-btn" onClick={google} disabled={busy}>Googleでログイン</button>
+        <div className="auth-or">または メールで</div>
+        <input className="auth-input" type="email" placeholder="メールアドレス" value={email} onChange={(e) => setEmail(e.target.value)} />
+        <input className="auth-input" type="password" placeholder="パスワード（6文字以上）" value={pw} onChange={(e) => setPw(e.target.value)} />
+        {err && <div className="error-msg">{err}</div>}
+        <button className="btn primary" onClick={submit} disabled={busy || !email || pw.length < 6}>{busy ? "処理中…" : (mode === "login" ? "ログイン" : "登録する")}</button>
+        <button className="auth-switch" onClick={() => { setErr(""); setMode(mode === "login" ? "register" : "login"); }}>
+          {mode === "login" ? "アカウントが無い方はこちら（新規登録）" : "すでにアカウントをお持ちの方（ログイン）"}
+        </button>
+      </div>
+      <div className="btn-row"><button className="btn ghost" onClick={onBack}>トップへ戻る</button></div>
+    </div>
+  );
+}
+function translateAuthErr(e) {
+  const c = (e && e.code) || "";
+  if (c.includes("invalid-email")) return "メールアドレスの形式が正しくありません。";
+  if (c.includes("user-not-found")) return "このメールのアカウントが見つかりません。新規登録してください。";
+  if (c.includes("wrong-password")) return "パスワードが違います。";
+  if (c.includes("email-already-in-use")) return "このメールは既に登録済みです。ログインしてください。";
+  if (c.includes("weak-password")) return "パスワードは6文字以上にしてください。";
+  if (c.includes("popup-closed")) return "ログインがキャンセルされました。";
+  return "うまくいきませんでした。時間をおいて再度お試しください。";
+}
+
+function MyPage({ user, profile, history, onBack, onLogin, onProfileSaved }) {
+  const [cloudStats, setCloudStats] = useState(null);
+  const [ranking, setRanking] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [nameInput, setNameInput] = useState((profile && profile.displayName) || "");
+  const [savingName, setSavingName] = useState(false);
+
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      setLoading(true);
+      if (user) {
+        const s = await cloud.getMyStats(user.uid);
+        const r = await cloud.getRanking(20);
+        if (alive) { setCloudStats(s); setRanking(r); }
+      }
+      if (alive) setLoading(false);
+    })();
+    return () => { alive = false; };
+  }, [user]);
+
+  // 端末内の成績（未ログイン時 or 補助表示）
+  const local = useMemo(() => {
+    const attempts = history.length;
+    const tf = history.reduce((s, h) => s + (h.fakeTotal || 0), 0);
+    const th = history.reduce((s, h) => s + (h.hits || 0), 0);
+    const wins = history.filter((h) => h.result === "win").length;
+    return { attempts, discRate: tf > 0 ? Math.round((th / tf) * 100) : 0, wins };
+  }, [history]);
+
+  if (!cloud.enabled) {
+    return (
+      <div className="screen">
+        <div className="section-head"><h2 className="h2">マイページ</h2></div>
+        <div className="lib-empty">クラウド機能は未設定のため、端末内の成績のみ表示します。</div>
+        <LocalStatBlock local={local} />
+        <div className="btn-row"><button className="btn ghost" onClick={onBack}>トップへ</button></div>
+      </div>
+    );
+  }
+  if (!user) {
+    return (
+      <div className="screen">
+        <div className="section-head"><h2 className="h2">マイページ</h2><p className="muted">ログインすると、勝率の記録とランキング参加ができます。</p></div>
+        <LocalStatBlock local={local} />
+        <div className="btn-row"><button className="btn primary" onClick={onLogin}>ログイン / 新規登録</button><button className="btn ghost" onClick={onBack}>トップへ</button></div>
+      </div>
+    );
+  }
+
+  const s = cloudStats || { attempts: 0, wins: 0, draws: 0, loses: 0, totalFakes: 0, totalHits: 0, scoreSum: 0 };
+  const winRate = s.attempts > 0 ? Math.round((s.wins / s.attempts) * 100) : 0;
+  const discRate = s.totalFakes > 0 ? Math.round((s.totalHits / s.totalFakes) * 100) : 0;
+  const avgScore = s.attempts > 0 ? Math.round(s.scoreSum / s.attempts) : 0;
+
+  async function saveName() {
+    if (!nameInput.trim()) return;
+    setSavingName(true);
+    await cloud.setDisplayName(user.uid, nameInput.trim());
+    onProfileSaved && onProfileSaved({ ...(profile || {}), displayName: nameInput.trim() });
+    setSavingName(false);
+  }
+
+  return (
+    <div className="screen">
+      <div className="section-head"><h2 className="h2">マイページ</h2><p className="muted">{user.email || "ログイン中"}</p></div>
+
+      <div className="name-edit">
+        <span className="name-label">表示名（ランキングに出る名前）</span>
+        <div className="name-row">
+          <input className="auth-input" value={nameInput} onChange={(e) => setNameInput(e.target.value)} placeholder="表示名" />
+          <button className="btn ghost small-btn" onClick={saveName} disabled={savingName}>{savingName ? "保存中…" : "保存"}</button>
+        </div>
+      </div>
+
+      <div className="mypage-stats">
+        <div className="ms-card"><div className="ms-v" style={{ color: "#5bbf7a" }}>{winRate}%</div><div className="ms-l">勝率</div></div>
+        <div className="ms-card"><div className="ms-v" style={{ color: "#4cc6c0" }}>{discRate}%</div><div className="ms-l">粉飾発見率</div></div>
+        <div className="ms-card"><div className="ms-v">{s.attempts}</div><div className="ms-l">挑戦数</div></div>
+        <div className="ms-card"><div className="ms-v" style={{ color: avgScore >= 0 ? "#5bbf7a" : "#e5563f" }}>{avgScore >= 0 ? "+" : ""}{avgScore}</div><div className="ms-l">平均スコア</div></div>
+      </div>
+      <div className="mypage-sub">
+        <span>勝 {s.wins}</span><span>分 {s.draws}</span><span>負 {s.loses}</span>
+      </div>
+
+      <div className="rank-section">
+        <h3 className="rank-title">🏆 勝利数ランキング</h3>
+        {loading ? <div className="muted small">読み込み中…</div> : ranking.length === 0 ? (
+          <div className="muted small">まだランキングデータがありません。挑戦すると反映されます。</div>
+        ) : (
+          <div className="rank-list">
+            {ranking.map((e, i) => {
+              const wr = e.attempts > 0 ? Math.round((e.wins / e.attempts) * 100) : 0;
+              const me = e.uid === user.uid;
+              return (
+                <div className={`rank-row ${me ? "me" : ""}`} key={e.uid}>
+                  <span className="rank-no">{i + 1}</span>
+                  <span className="rank-name">{e.displayName || "匿名"}{me && <span className="rank-me-tag">あなた</span>}</span>
+                  <span className="rank-wins">{e.wins || 0}勝</span>
+                  <span className="rank-wr">勝率{wr}%</span>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      <div className="btn-row">
+        <button className="btn ghost" onClick={onBack}>トップへ</button>
+        <button className="btn ghost danger-text" onClick={() => cloud.signOut()}>ログアウト</button>
+      </div>
+    </div>
+  );
+}
+function LocalStatBlock({ local }) {
+  return (
+    <div className="mypage-stats">
+      <div className="ms-card"><div className="ms-v" style={{ color: "#5bbf7a" }}>{local.wins}</div><div className="ms-l">勝利数</div></div>
+      <div className="ms-card"><div className="ms-v" style={{ color: "#4cc6c0" }}>{local.discRate}%</div><div className="ms-l">発見率</div></div>
+      <div className="ms-card"><div className="ms-v">{local.attempts}</div><div className="ms-l">挑戦数</div></div>
+    </div>
+  );
+}
+
+function Home({ history, user, profile, onBuild, onLoad, onRules, onMine, onLogin, onMypage }) {
   const stats = useMemo(() => {
     const attempts = history.length;
     const tf = history.reduce((s, h) => s + (h.fakeTotal || 0), 0);
@@ -835,7 +1101,10 @@ function Home({ history, onBuild, onLoad, onRules, onMine }) {
           <div className="role-go">調査一覧へ →</div>
         </button>
       </div>
-      <div className="mine-link-row"><button className="mine-link" onClick={onMine}>🗂 マイ出題一覧（作った出題を再送信）</button></div>
+      <div className="mine-link-row">
+        <button className="mine-link" onClick={onMine}>🗂 マイ出題一覧（作った出題を再送信）</button>
+        {cloud.enabled && <button className="mine-link" onClick={user ? onMypage : onLogin}>🏆 {user ? "マイページ・ランキング" : "ログインして成績を記録"}</button>}
+      </div>
       <div className="hist-section">
         <div className="hist-head">
           <h2 className="hist-title">調査官カルテ</h2>

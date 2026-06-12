@@ -413,3 +413,41 @@ html, body { max-width: 100%; overflow-x: hidden; }
 .cons-elim-note.on { border-left: 3px solid #d9a441; }
 .cons-elim-note b { color: #e7eef5; }
 .cons-line.diff b { color: #d9a441; }
+
+/* ===== ログイン / マイページ / ランキング ===== */
+.top-right { display: flex; align-items: center; gap: 12px; }
+.acct-chip { font-family: 'Courier New', monospace; font-size: 12px; padding: 6px 14px; border-radius: 16px; border: 1px solid #2f3e4e; background: #18202a; color: #e7eef5; cursor: pointer; }
+.acct-chip.login { border-color: #d9a441; color: #d9a441; }
+.acct-chip:hover { border-color: #4cc6c0; }
+.auth-card { background: #18202a; border: 1.5px solid #2f3e4e; border-radius: 12px; padding: 20px; max-width: 420px; margin: 0 auto 16px; display: flex; flex-direction: column; gap: 12px; }
+.auth-input { background: #0f1419; border: 1px solid #2f3e4e; color: #e7eef5; font-family: 'Courier New', monospace; padding: 11px 12px; border-radius: 7px; font-size: 14px; }
+.auth-input:focus { outline: 2px solid #d9a441; }
+.google-btn { background: #fff; color: #202b38; border-color: #fff; font-weight: bold; }
+.google-btn:hover { background: #eee; }
+.auth-or { text-align: center; font-size: 12px; color: #5a6f82; font-family: 'Courier New', monospace; }
+.auth-switch { background: transparent; border: none; color: #4cc6c0; font-size: 12.5px; cursor: pointer; text-decoration: underline; padding: 4px; }
+.name-edit { background: #18202a; border: 1px solid #2f3e4e; border-radius: 10px; padding: 14px; margin-bottom: 16px; }
+.name-label { font-size: 12px; color: #8aa0b4; font-family: 'Courier New', monospace; }
+.name-row { display: flex; gap: 8px; margin-top: 6px; }
+.name-row .auth-input { flex: 1; }
+.small-btn { padding: 8px 14px; font-size: 12px; }
+.mypage-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 8px; }
+.ms-card { background: #18202a; border: 1.5px solid #2f3e4e; border-radius: 10px; padding: 16px 10px; text-align: center; }
+.ms-v { font-family: Georgia, 'Times New Roman', serif; font-size: 28px; font-weight: 900; line-height: 1; }
+.ms-l { font-family: 'Courier New', monospace; font-size: 10px; color: #5a6f82; margin-top: 6px; letter-spacing: 1px; }
+.mypage-sub { display: flex; gap: 18px; justify-content: center; font-family: 'Courier New', monospace; font-size: 13px; color: #8aa0b4; margin-bottom: 20px; }
+.rank-section { background: #18202a; border: 1.5px solid #2f3e4e; border-radius: 12px; padding: 18px; margin-bottom: 18px; }
+.rank-title { font-family: Georgia, 'Times New Roman', serif; font-size: 18px; margin: 0 0 12px; }
+.rank-list { display: flex; flex-direction: column; gap: 6px; }
+.rank-row { display: flex; align-items: center; gap: 12px; padding: 9px 12px; background: #202b38; border-radius: 8px; font-size: 13px; }
+.rank-row.me { border: 1px solid #d9a441; background: rgba(217,164,65,.1); }
+.rank-no { font-family: Georgia, serif; font-weight: 900; width: 24px; color: #d9a441; }
+.rank-name { flex: 1; font-family: 'Courier New', monospace; display: flex; align-items: center; gap: 8px; }
+.rank-me-tag { font-size: 9px; background: #d9a441; color: #0f1419; padding: 1px 6px; border-radius: 4px; }
+.rank-wins { font-family: 'Courier New', monospace; color: #5bbf7a; }
+.rank-wr { font-family: 'Courier New', monospace; font-size: 11px; color: #8aa0b4; }
+.danger-text { color: #e5563f; }
+@media (max-width: 560px) {
+  .mypage-stats { grid-template-columns: repeat(2, 1fr); }
+  .top-right { flex-direction: column; align-items: flex-end; gap: 4px; }
+}

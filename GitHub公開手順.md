@@ -107,6 +107,69 @@ GitHubの「Add file → Upload files」に、`build` `library` `rules` の**フ
 
 ---
 
+## ログイン機能の設定（Firebase・任意）
+
+ログイン／マイページ（勝率）／全員ランキングを使うには、無料の Firebase を設定します。**設定しなくてもゲームは動きます**（その場合ログイン機能だけオフになり、成績は端末内のみ）。
+
+### 1. Firebaseプロジェクトを作る
+1. https://console.firebase.google.com/ にGoogleアカウントでログイン
+2. 「プロジェクトを追加」→ 好きな名前（例: cooking-the-books）→ 作成（Googleアナリティクスは無しでOK）
+
+### 2. ウェブアプリを登録して構成を取得
+1. プロジェクトのトップで、ウェブアイコン `</>` をクリック
+2. アプリ名を入力して登録
+3. 表示される `const firebaseConfig = { ... }` の中身（apiKey など）をコピー
+
+### 3. firebase-config.js に貼り付ける
+このフォルダの `firebase-config.js` を開き、コピーした値を該当箇所に貼ります。
+```js
+window.FIREBASE_CONFIG = {
+  apiKey: "ここに貼る",
+  authDomain: "ここに貼る",
+  projectId: "ここに貼る",
+  storageBucket: "ここに貼る",
+  messagingSenderId: "ここに貼る",
+  appId: "ここに貼る"
+};
+```
+編集した `firebase-config.js` を GitHub にアップロード（直下）。
+
+### 4. ログイン方法を有効化
+Firebaseコンソール → 「Authentication」→「始める」→「Sign-in method」で、
+- **メール/パスワード** を有効化
+- **Google** を有効化（プロジェクトのサポートメールを選ぶだけ）
+
+### 5. データベース（Firestore）を作る
+1. コンソール →「Firestore Database」→「データベースの作成」
+2. 本番 or テストモード → ロケーションは asia-northeast1（東京）推奨
+3. 作成後、「ルール」タブを開き、次に置き換えて公開：
+```
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 自分の成績・プロフィールは自分だけ書き込み可、ランキング表示のため読み取りは全員可
+    match /stats/{uid} {
+      allow read: if true;
+      allow write: if request.auth != null && request.auth.uid == uid;
+    }
+    match /users/{uid} {
+      allow read: if true;
+      allow write: if request.auth != null && request.auth.uid == uid;
+    }
+  }
+}
+```
+
+### 6. 公開ドメインを許可（Googleログイン用）
+Authentication →「Settings」→「承認済みドメイン」に
+`chiyoko-san.github.io` を追加（無ければ）。
+
+これで、サイト右上に「ログイン」が出ます。ログインすると成績がクラウドに保存され、マイページで勝率、ランキングで全員の順位が見られます。
+
+> 補足: `firebase-config.js` の apiKey は公開されますが、Webアプリでは正常な仕様です（誰でも見えてよい識別子）。不正書き込みは上記 Firestore ルールで防ぎます。
+
+---
+
 ## 仕組みのメモ（技術者向け）
 - React 18 と Babel Standalone を CDN から読み込み、`app.jsx` をブラウザで変換して実行します（ビルド不要）。
 - データ保存は `localStorage`。
