@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://chiyoko-san.github.io/Cooking-the-Books/sitemap.xml

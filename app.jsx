@@ -7,10 +7,14 @@ const storage = (typeof window !== "undefined" && window.storage && typeof windo
   async set(key, value) { localStorage.setItem(key, value); return { key, value }; },
   async delete(key) { localStorage.removeItem(key); return { key, deleted: true }; },
 };
-// 共有リンク: 現在のページURL + #データ
+// 共有リンク: 常にトップ（ベース）URL + #データ。サブページ(/build/等)からでも安定。
+function baseSiteUrl() {
+  let p = location.pathname.replace(/(build|library|rules)\/?$/, "");
+  if (!p.endsWith("/")) p += "/";
+  return location.origin + p;
+}
 function makeShareLink(code) {
-  const base = location.origin + location.pathname;
-  return base + "#play=" + encodeURIComponent(code);
+  return baseSiteUrl() + "#play=" + encodeURIComponent(code);
 }
 // URLの#からプレイ用コードを取り出す
 function readHashCode() {
@@ -406,7 +410,9 @@ async function deleteFromMine(mid) { let list = await loadMine(); list = list.fi
 
 // ================================================================
 function App() {
-  const [route, setRoute] = useState("home");
+  const VALID_START = ["home", "build", "library", "rules"];
+  const startRoute = (typeof window !== "undefined" && VALID_START.includes(window.__START_ROUTE__)) ? window.__START_ROUTE__ : "home";
+  const [route, setRoute] = useState(startRoute);
   const [companies, setCompanies] = useState([makeCompany("parent", 0, "manufacturing"), makeCompany("sub", 1, "retail")]);
   const [internalTxns, setInternalTxns] = useState([]);
   const [fakes, setFakes] = useState([]);
@@ -429,17 +435,27 @@ function App() {
 
   useEffect(() => { loadHistory().then(setHistory); loadLibrary().then(setLibrary); loadMine().then(setMine); }, []);
 
-  // ---- ブラウザの戻る/進む対応 ----
+  // ---- ブラウザの戻る/進む対応 ＋ クリーンURL同期 ----
   // route が変わったら履歴に積む。popstate(戻る)で route を復元。
   const popping = useRef(false);
+  // 独立URLを持つページ → パス。それ以外はベース(トップ)のパスを使う。
+  const BASE_PATH = (() => {
+    // 例: /Cooking-the-Books/ または /Cooking-the-Books/build/ から末尾ページ名を除いたベースを得る
+    let p = window.location.pathname;
+    p = p.replace(/(build|library|rules)\/?$/, ""); // 既知のサブページ名を除去
+    if (!p.endsWith("/")) p += "/";
+    return p;
+  })();
+  const pathForRoute = (r) => {
+    if (r === "build" || r === "library" || r === "rules") return BASE_PATH + r + "/";
+    return BASE_PATH; // home とその他（投稿審査など）はトップのURL
+  };
   useEffect(() => {
-    // 初期状態を置き換え
-    window.history.replaceState({ route: "home" }, "");
+    window.history.replaceState({ route: startRoute }, "", pathForRoute(startRoute));
     const onPop = (e) => {
       popping.current = true;
       const r = (e.state && e.state.route) || "home";
       setRoute(r);
-      // tipが開いていたら閉じる
       setTip(null);
     };
     window.addEventListener("popstate", onPop);
@@ -447,9 +463,8 @@ function App() {
   }, []);
   useEffect(() => {
     if (popping.current) { popping.current = false; return; }
-    // home以外への遷移を履歴に積む（連続重複は避ける）
     const cur = window.history.state && window.history.state.route;
-    if (cur !== route) window.history.pushState({ route }, "");
+    if (cur !== route) window.history.pushState({ route }, "", pathForRoute(route));
   }, [route]);
 
   // URLの#play=... があれば、その出題を自動で審査開始
