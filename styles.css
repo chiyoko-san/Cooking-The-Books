@@ -253,7 +253,7 @@ html, body { max-width: 100%; overflow-x: hidden; }
 .tip-head { display:flex; justify-content:space-between; align-items:center; margin-bottom: 12px; }
 .tip-label { font-family: Georgia, 'Times New Roman', serif; font-size: 20px; font-weight: bold; color: #d9a441; }
 .tip-x { background: transparent; border: none; color: #8aa0b4; font-size: 18px; cursor: pointer; }
-.tip-desc { font-size: 14px; line-height: 1.8; color: #e7eef5; }
+.tip-desc { font-size: 14px; line-height: 1.8; color: #e7eef5; white-space: pre-wrap; }
 
 /* ===== あそびかたページ ===== */
 .rules-cta { display:inline-block; margin-top: 18px; font-family: 'Courier New', ui-monospace, monospace; font-size: 14px; padding: 12px 22px; border-radius: 24px; border: 1.5px solid #d9a441; background: rgba(217,164,65,.1); color: #d9a441; cursor: pointer; }
@@ -379,3 +379,37 @@ html, body { max-width: 100%; overflow-x: hidden; }
 .gd-note b { color: #e7eef5; }
 .txn-view.susp { border-left: 3px solid #e5563f; }
 .txn-susp-mark { color: #e5563f; }
+
+/* ===== 指標チップ(タップ可) ===== */
+.chip.tappable { cursor: pointer; }
+.chip.tappable:hover { border-color: #4cc6c0; }
+.chip-q { display: inline-flex; align-items: center; justify-content: center; width: 12px; height: 12px; border-radius: 50%; border: 1px solid #5a6f82; font-size: 8px; color: #5a6f82; margin-left: 4px; }
+.chip.warn .chip-q { border-color: #e5563f; color: #e5563f; }
+
+/* ===== 期ヘッダー＆ヒント ===== */
+.invest-co-r { display: inline-flex; align-items: center; gap: 8px; }
+.hint-btn { font-family: 'Courier New', monospace; font-size: 11px; padding: 4px 10px; border-radius: 14px; border: 1px solid #d9a441; background: transparent; color: #d9a441; cursor: pointer; }
+.hint-btn.on { background: rgba(217,164,65,.16); }
+.period-head-bar { display: flex; gap: 0; margin: 8px 0; border: 1px solid #2f3e4e; border-radius: 7px; overflow: hidden; }
+.ph-cell { flex: 1; text-align: right; padding: 5px 8px; font-family: 'Courier New', monospace; font-size: 11px; color: #8aa0b4; border-left: 1px solid #2f3e4e; background: #18202a; }
+.ph-cell:first-child { border-left: none; }
+.ph-cell.cur { color: #d9a441; background: rgba(217,164,65,.1); font-weight: bold; }
+.it-val.multi { display: flex; gap: 0; justify-content: flex-end; }
+.it-val.multi .pv { flex: 1; text-align: right; padding-right: 8px; }
+.it-val.multi .pv.cur { color: #e7eef5; font-weight: bold; }
+.it-val.multi .pv:not(.cur) { color: #5a6f82; }
+
+/* ===== 推移グラフ ===== */
+.trend-chart { background: #0f1419; border: 1px solid #2f3e4e; border-radius: 8px; padding: 12px; margin: 8px 0 12px; }
+.tc-legend { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 8px; }
+.tc-leg { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; color: #8aa0b4; font-family: 'Courier New', monospace; }
+.tc-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+.tc-svg { width: 100%; height: auto; display: block; }
+.tc-note { font-size: 11.5px; color: #8aa0b4; line-height: 1.7; margin: 8px 0 0; }
+.tc-note b { color: #e7eef5; }
+
+/* ===== 連結比較の注記 ===== */
+.cons-elim-note { font-size: 12.5px; line-height: 1.7; color: #8aa0b4; background: #202b38; border-radius: 7px; padding: 9px 12px; margin-bottom: 12px; }
+.cons-elim-note.on { border-left: 3px solid #d9a441; }
+.cons-elim-note b { color: #e7eef5; }
+.cons-line.diff b { color: #d9a441; }

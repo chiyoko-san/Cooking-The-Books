@@ -1472,7 +1472,8 @@ function GroupDiagram({ companies, internalTxns }) {
 function Investigate({ data, accusations, setAccusations, accuseCircular, setAccuseCircular, accuseFx, toggleFxAccuse, onSubmit, onTip }) {
   const companies = data.companies;
   const internalTxns = data.internalTxns || [];
-  const { cons, sum } = useMemo(() => consolidate(companies, internalTxns), [companies, internalTxns]);
+  const [hintFor, setHintFor] = useState(null); // ヒント(推移グラフ)を開いている会社cid
+  const { cons, sum, elim } = useMemo(() => consolidate(companies, internalTxns), [companies, internalTxns]);
 
   function toggle(cid, key) {
     const id = `${cid}:${key}`;
@@ -1502,11 +1503,23 @@ function Investigate({ data, accusations, setAccusations, accuseCircular, setAcc
           const valCells = (k) => np > 1
             ? c.periods.map((f, i) => <span key={i} className={`pv ${i === np - 1 ? "cur" : ""}`}>{fmt(f[k])}</span>)
             : <span>{cur.sym}{fmt(cf[k])}</span>;
+          const showHint = hintFor === c.cid;
           return (
             <div className="invest-card" key={c.cid}>
-              <div className="invest-co"><span>{c.name}</span><span className="invest-ind">{ind.icon} {ind.name}</span></div>
+              <div className="invest-co">
+                <span>{c.name}</span>
+                <span className="invest-co-r">
+                  <span className="invest-ind">{ind.icon} {ind.name}</span>
+                  {np > 1 && <button className={`hint-btn ${showHint ? "on" : ""}`} onClick={() => setHintFor(showHint ? null : c.cid)}>📈 ヒント</button>}
+                </span>
+              </div>
               <div className="invest-bench">基準: 原価率{ind.cogs[0]}–{ind.cogs[1]}% / 売掛{ind.recvDays[0]}–{ind.recvDays[1]}日 / 在庫{ind.invDays[0]}–{ind.invDays[1]}日</div>
-              {np > 1 && <div className="period-legend">{labs.map((l, i) => <span key={i} className={i === np - 1 ? "cur" : ""}>{l}</span>)}<span className="period-legend-note">（左=古い → 右=当期）</span></div>}
+              {np > 1 && (
+                <div className="period-head-bar">
+                  {labs.map((l, i) => <span key={i} className={`ph-cell ${i === np - 1 ? "cur" : ""}`}>{l}</span>)}
+                </div>
+              )}
+              {showHint && np > 1 && <TrendChart company={c} />}
               {c.currency !== "JPY" && <div className={`fx-badge ${Math.abs(fxOff) > cur.band ? "warn" : ""}`}>{cur.sym}{cur.name}建 / 換算{rateOf(c)}円 (市場{cur.market}円, 乖離{fxOff > 0 ? "+" : ""}{fxOff}%)</div>}
 
               <div className="inv-stmt-label">損益計算書</div>
@@ -1540,12 +1553,12 @@ function Investigate({ data, accusations, setAccusations, accuseCircular, setAcc
               </tbody></table>
 
               <div className="invest-ratios">
-                <Chip label="原価率" v={r.cogsRate} unit="%" warn={fl.cogs === "warn"} />
-                <Chip label="売掛日数" v={r.recvDays} unit="日" warn={fl.recv === "warn"} />
-                <Chip label="在庫日数" v={r.invDays} unit="日" warn={fl.inv === "warn"} />
-                <Chip label="営業利益率" v={r.opMargin} unit="%" warn={fl.op === "warn"} />
-                {showTax && <Chip label="実効税率" v={r.taxRate} unit="%" warn={fl.tax === "warn"} />}
-                {(liabKeys.length > 0 || Math.abs(r.bsGap) > 0.5) && <Chip label="貸借差額" v={r.bsGap} unit="" warn={fl.bs === "warn"} />}
+                <Chip label="原価率" v={r.cogsRate} unit="%" warn={fl.cogs === "warn"} infoKey="cogsRate" onTip={onTip} />
+                <Chip label="売掛日数" v={r.recvDays} unit="日" warn={fl.recv === "warn"} infoKey="recvDays" onTip={onTip} />
+                <Chip label="在庫日数" v={r.invDays} unit="日" warn={fl.inv === "warn"} infoKey="invDays" onTip={onTip} />
+                <Chip label="営業利益率" v={r.opMargin} unit="%" warn={fl.op === "warn"} infoKey="opMargin" onTip={onTip} />
+                {showTax && <Chip label="実効税率" v={r.taxRate} unit="%" warn={fl.tax === "warn"} infoKey="taxRate" onTip={onTip} />}
+                {(liabKeys.length > 0 || Math.abs(r.bsGap) > 0.5) && <Chip label="貸借差額" v={r.bsGap} unit="" warn={fl.bs === "warn"} infoKey="bsGap" onTip={onTip} />}
               </div>
 
               {c.currency !== "JPY" && (
@@ -1574,6 +1587,11 @@ function Investigate({ data, accusations, setAccusations, accuseCircular, setAcc
 
       <div className="cons-preview invest">
         <div className="cons-title">連結 vs 単純合算（円換算）</div>
+        {elim > 0 ? (
+          <div className="cons-elim-note on">内部消去額 <b>¥{fmt(elim)}</b>。グループ内の取引が連結で相殺されています。消去額が取引の実態に比べて不自然に大きいと、実体のない売上を回す<b>循環取引</b>の疑い。</div>
+        ) : (
+          <div className="cons-elim-note">この出題はグループ内部取引が無い（または消去額ゼロ）ため、<b>連結と単純合算は一致します</b>。これは正常で、循環取引の手がかりにはなりません。</div>
+        )}
         <div className="cons-grid">
           <div className="cons-col"><div className="cons-h">単純合算</div>
             <div className="cons-line"><span>売上高</span><b>¥{fmt(sum.sales)}</b></div>
@@ -1581,9 +1599,9 @@ function Investigate({ data, accusations, setAccusations, accuseCircular, setAcc
             <div className="cons-line"><span>資産合計</span><b>¥{fmt(totalAssets(sum))}</b></div>
           </div>
           <div className="cons-col"><div className="cons-h">開示された連結</div>
-            <div className="cons-line"><span>売上高</span><b>¥{fmt(cons.sales)}</b></div>
-            <div className="cons-line"><span>営業利益</span><b>¥{fmt(opProfit(cons))}</b></div>
-            <div className="cons-line"><span>資産合計</span><b>¥{fmt(totalAssets(cons))}</b></div>
+            <div className={`cons-line ${cons.sales !== sum.sales ? "diff" : ""}`}><span>売上高</span><b>¥{fmt(cons.sales)}</b></div>
+            <div className={`cons-line ${opProfit(cons) !== opProfit(sum) ? "diff" : ""}`}><span>営業利益</span><b>¥{fmt(opProfit(cons))}</b></div>
+            <div className={`cons-line ${totalAssets(cons) !== totalAssets(sum) ? "diff" : ""}`}><span>資産合計</span><b>¥{fmt(totalAssets(cons))}</b></div>
           </div>
         </div>
       </div>
@@ -1597,10 +1615,80 @@ function Investigate({ data, accusations, setAccusations, accuseCircular, setAcc
   );
 }
 
-function Chip({ label, v, unit, warn }) {
+// 指標(チップ)の説明: 何を表し、warn時に何を疑うか
+const METRIC_INFO = {
+  cogsRate: { label: "原価率", mean: "売上に対する売上原価の割合。商品をいくらで仕入れ・製造して売ったか。", suspect: "業種より極端に低いと、原価を在庫に付け替えて利益を水増しした疑い（原価隠し）。極端に高いと赤字隠しの反動など。" },
+  recvDays: { label: "売掛金回転日数", mean: "売った代金が回収されるまでの平均日数。売掛金 ÷ 売上 × 365。", suspect: "業種より異常に長いと、回収できない（実在しない）売上を計上した疑い（架空売上）。" },
+  invDays: { label: "在庫回転日数", mean: "在庫が売れるまでに滞留する平均日数。在庫 ÷ 売上原価 × 365。", suspect: "異常に長いと、売れない在庫の積み上がり、または原価隠し・在庫水増しの疑い。" },
+  opMargin: { label: "営業利益率", mean: "本業の儲けの率。営業利益 ÷ 売上。", suspect: "業種実態よりやけに高いと、費用の隠蔽や特別損失の先送りで利益を盛った疑い。" },
+  taxRate: { label: "実効税率", mean: "税引前利益に対する法人税等の割合。通常はおおむね30%前後。", suspect: "利益が出ているのに極端に低いと、税金を過小計上して最終利益を膨らませた疑い。" },
+  bsGap: { label: "貸借差額", mean: "資産合計と（負債＋純資産）合計の差。本来はゼロで一致するはず。", suspect: "ゼロでなければ、計上すべき損失を隠して資産に残した、または借入金を簿外化した疑い。" },
+};
+
+function TrendChart({ company }) {
+  const periods = company.periods;
+  const np = periods.length;
+  const labs = periodLabels(np);
+  // 表示する系列（金額系と、比率系を分けると分かりやすい）
+  const series = [
+    { key: "sales", label: "売上高", color: "#4cc6c0", get: (f) => num(f, "sales") },
+    { key: "op", label: "営業利益", color: "#5bbf7a", get: (f) => opProfit(f) },
+    { key: "receivables", label: "売掛金", color: "#d9a441", get: (f) => num(f, "receivables") },
+    { key: "inventory", label: "棚卸資産", color: "#e5563f", get: (f) => num(f, "inventory") },
+  ];
+  const W = 660, H = 240, padL = 50, padR = 16, padT = 16, padB = 34;
+  const plotW = W - padL - padR, plotH = H - padT - padB;
+  // 全系列の最大・最小（0を基準に）
+  let maxV = 0, minV = 0;
+  series.forEach((s) => periods.forEach((f) => { const v = s.get(f); if (v > maxV) maxV = v; if (v < minV) minV = v; }));
+  if (maxV === minV) maxV = minV + 1;
+  const x = (i) => padL + (np === 1 ? plotW / 2 : (plotW / (np - 1)) * i);
+  const y = (v) => padT + plotH - ((v - minV) / (maxV - minV)) * plotH;
+  const ticks = 4;
   return (
-    <div className={`chip ${warn ? "warn" : ""}`}>
-      <span className="chip-l">{label}</span>
+    <div className="trend-chart">
+      <div className="tc-legend">
+        {series.map((s) => <span key={s.key} className="tc-leg"><span className="tc-dot" style={{ background: s.color }}></span>{s.label}</span>)}
+      </div>
+      <svg viewBox={`0 0 ${W} ${H}`} className="tc-svg" preserveAspectRatio="xMidYMid meet">
+        {/* グリッド＋目盛 */}
+        {Array.from({ length: ticks + 1 }).map((_, i) => {
+          const v = minV + ((maxV - minV) / ticks) * i;
+          const yy = y(v);
+          return (
+            <g key={i}>
+              <line x1={padL} y1={yy} x2={W - padR} y2={yy} stroke="#2f3e4e" strokeWidth="1" strokeDasharray="2 3" />
+              <text x={padL - 6} y={yy + 3} fill="#5a6f82" fontSize="9" fontFamily="'Courier New', monospace" textAnchor="end">{fmt(v)}</text>
+            </g>
+          );
+        })}
+        {/* 期ラベル */}
+        {labs.map((l, i) => <text key={i} x={x(i)} y={H - 12} fill={i === np - 1 ? "#d9a441" : "#8aa0b4"} fontSize="11" fontFamily="'Courier New', monospace" textAnchor="middle">{l}</text>)}
+        {/* 各系列の折れ線 */}
+        {series.map((s) => {
+          const pts = periods.map((f, i) => `${x(i)},${y(s.get(f))}`).join(" ");
+          return (
+            <g key={s.key}>
+              <polyline points={pts} fill="none" stroke={s.color} strokeWidth="2" />
+              {periods.map((f, i) => <circle key={i} cx={x(i)} cy={y(s.get(f))} r={i === np - 1 ? 4 : 3} fill={s.color} />)}
+            </g>
+          );
+        })}
+      </svg>
+      <p className="tc-note">期をまたいだ動きが手がかり。<b>売上が急に伸びたのに売掛金だけ不自然に膨らむ</b>、<b>利益は増えたのに在庫ばかり積み上がる</b>——こうした「足並みの乱れ」は粉飾のサイン。健全なら各線はおおむね揃って動きます。</p>
+    </div>
+  );
+}
+
+function Chip({ label, v, unit, warn, infoKey, onTip }) {
+  const info = METRIC_INFO[infoKey];
+  const handle = () => {
+    if (!info || !onTip) return;
+    onTip({ label: info.label, desc: `【意味】${info.mean}\n\n${warn ? "⚑ この値は業種の常識から外れています。\n【疑い】" + info.suspect : "現在この指標は正常範囲内です。\n【参考】" + info.suspect}` });
+  };
+  return (
+    <div className={`chip ${warn ? "warn" : ""} ${info ? "tappable" : ""}`} onClick={handle} title={info ? "タップで説明" : ""}>
+      <span className="chip-l">{label}{info && <span className="chip-q">?</span>}</span>
       <span className="chip-v">{(v || 0).toFixed(Math.abs(v) > 200 ? 0 : 1)}{unit}{warn && " ⚑"}</span>
     </div>
   );
