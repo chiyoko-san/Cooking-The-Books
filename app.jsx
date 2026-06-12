@@ -534,7 +534,7 @@ function App() {
       periodCount,
       title: (multi ? `📅${periodCount}期 ` : "") + companies.map((c) => INDUSTRIES[c.industry].icon).join("") + " " + companies.length + "社",
       companies: companies.map((c) => ({ cid: c.cid, role: c.role, name: c.name, industry: c.industry, currency: c.currency, fxRate: c.fxRate, periods: c.periods, fin: curFin(c) })),
-      internalTxns, fakes: isClean ? [] : fakes, fxFakes,
+      internalTxns: internalTxns.map((t) => ({ from: t.from, to: t.to, amount: t.amount })), fakes: isClean ? [] : fakes, fxFakes,
       circular: isClean ? false : internalTxns.some((t) => t.amount > (t.real || 0)),
       clean: isClean,
     };
@@ -1399,6 +1399,76 @@ function Library({ library, onStart, onAdd, onRemove, onBack }) {
 }
 
 // ================================================================
+function GroupDiagram({ companies, internalTxns }) {
+  const parent = companies.find((c) => c.role === "parent") || companies[0];
+  const subs = companies.filter((c) => c.cid !== parent.cid);
+  const W = 680, topY = 60, subY = 210;
+  const cx = W / 2;
+  // 各社の座標
+  const pos = {};
+  pos[parent.cid] = { x: cx, y: topY };
+  const n = subs.length;
+  subs.forEach((s, i) => {
+    const span = Math.min(W - 120, Math.max(220, n * 150));
+    const x = n === 1 ? cx : (cx - span / 2) + (span / (n - 1)) * i;
+    pos[s.cid] = { x, y: subY };
+  });
+  const boxW = 116, boxH = 50;
+  const nameOf = (cid) => companies.find((c) => c.cid === cid)?.name || cid;
+  // 取引の矢印（from→to）
+  const arrows = internalTxns.map((t, i) => {
+    const a = pos[t.from], b = pos[t.to];
+    if (!a || !b) return null;
+    return { a, b, amount: t.amount || 0, key: i, from: t.from, to: t.to };
+  }).filter(Boolean);
+  const H = subs.length > 0 ? 290 : 130;
+
+  return (
+    <div className="group-diagram">
+      <div className="gd-title">グループ構造と資金の流れ</div>
+      <div className="gd-legend">
+        <span className="gd-leg"><span className="gd-line own"></span>資本関係（親→子）</span>
+        <span className="gd-leg"><span className="gd-line flow"></span>内部取引（計上額）</span>
+      </div>
+      <svg viewBox={`0 0 ${W} ${H}`} className="gd-svg" preserveAspectRatio="xMidYMid meet">
+        <defs>
+          <marker id="ah" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#4cc6c0" /></marker>
+        </defs>
+        {/* 資本関係の線 */}
+        {subs.map((s) => {
+          const a = pos[parent.cid], b = pos[s.cid];
+          return <line key={"own" + s.cid} x1={a.x} y1={a.y + boxH / 2} x2={b.x} y2={b.y - boxH / 2} stroke="#3a4a5c" strokeWidth="1.5" strokeDasharray="4 3" />;
+        })}
+        {/* 内部取引の矢印 */}
+        {arrows.map((ar) => {
+          const x1 = ar.a.x, y1 = ar.a.y, x2 = ar.b.x, y2 = ar.b.y;
+          const mx = (x1 + x2) / 2 + (y1 === y2 ? 0 : 26), my = (y1 + y2) / 2;
+          return (
+            <g key={"fl" + ar.key}>
+              <path d={`M${x1},${y1} Q${mx},${my} ${x2},${y2}`} fill="none" stroke="#4cc6c0" strokeWidth="1.8" markerEnd="url(#ah)" opacity="0.9" />
+              <text x={mx} y={my - 4} fill="#4cc6c0" fontSize="11" fontFamily="'Courier New', monospace" textAnchor="middle">¥{fmt(ar.amount)}</text>
+            </g>
+          );
+        })}
+        {/* 会社ボックス */}
+        {companies.map((c) => {
+          const p = pos[c.cid]; if (!p) return null;
+          const isParent = c.cid === parent.cid;
+          return (
+            <g key={"box" + c.cid}>
+              <rect x={p.x - boxW / 2} y={p.y - boxH / 2} width={boxW} height={boxH} rx="8"
+                fill={isParent ? "#202b38" : "#18202a"} stroke={isParent ? "#d9a441" : "#2f3e4e"} strokeWidth={isParent ? "2" : "1.5"} />
+              <text x={p.x} y={p.y - 4} fill="#e7eef5" fontSize="13" fontFamily="Georgia, serif" textAnchor="middle" fontWeight="bold">{c.name}</text>
+              <text x={p.x} y={p.y + 13} fill="#8aa0b4" fontSize="10" fontFamily="'Courier New', monospace" textAnchor="middle">{INDUSTRIES[c.industry].icon} {isParent ? "親会社" : "子会社"}{c.currency !== "JPY" ? " / " + CURRENCIES[c.currency].sym : ""}</text>
+            </g>
+          );
+        })}
+      </svg>
+      <p className="gd-note">点線はグループの資本関係（親→子）。実線の矢印は内部取引の資金の流れで、数字は計上額です。連結では本来これらは相殺されて消えます。<b>単純合算と連結のズレ</b>が大きい、つまり消去額が不自然に大きいと、実体のない取引を回した<b>循環取引</b>の疑い。下の「連結 vs 単純合算」と照らし合わせて判断しましょう。</p>
+    </div>
+  );
+}
+
 function Investigate({ data, accusations, setAccusations, accuseCircular, setAccuseCircular, accuseFx, toggleFxAccuse, onSubmit, onTip }) {
   const companies = data.companies;
   const internalTxns = data.internalTxns || [];
@@ -1488,6 +1558,8 @@ function Investigate({ data, accusations, setAccusations, accuseCircular, setAcc
           );
         })}
       </div>
+
+      <GroupDiagram companies={companies} internalTxns={internalTxns} />
 
       <div className="invest-txn">
         <div className="invest-sub">開示された内部取引</div>
