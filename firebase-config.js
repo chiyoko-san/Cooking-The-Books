@@ -1,16 +1,14 @@
 // ============================================================
 //  Firebase 設定ファイル
-//  ここに、Firebaseコンソールで取得した「firebaseConfig」を貼り付けます。
-//  （手順は GitHub公開手順.md の「ログイン機能の設定」を参照）
-//
-//  未設定（下のままapiKeyが空）の場合、ログイン機能はオフになり、
-//  アプリは「端末内モード」で通常どおり動きます。
+//  Firebaseコンソールで取得した構成情報を反映済み。
+//  （プロジェクト: cooking-the-books-55e6e）
 // ============================================================
 window.FIREBASE_CONFIG = {
-  apiKey: "",              // 例: "AIzaSyXXXXXXXXXXXXXXXXXXXXXXXXX"
-  authDomain: "",          // 例: "your-app.firebaseapp.com"
-  projectId: "",           // 例: "your-app"
-  storageBucket: "",       // 例: "your-app.appspot.com"
-  messagingSenderId: "",   // 例: "1234567890"
-  appId: ""                // 例: "1:1234567890:web:abcdef"
+  apiKey: "AIzaSyCjYVoM18-TRJzHb2eAuH5zJFizefjBQNw",
+  authDomain: "cooking-the-books-55e6e.firebaseapp.com",
+  projectId: "cooking-the-books-55e6e",
+  storageBucket: "cooking-the-books-55e6e.firebasestorage.app",
+  messagingSenderId: "639218341705",
+  appId: "1:639218341705:web:79645b90d25a5431a1ac98",
+  measurementId: "G-PH06HNVN6W"
 };
