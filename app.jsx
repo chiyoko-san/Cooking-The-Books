@@ -1,3 +1,11 @@
+// ================================================================
+//  お問い合わせ先の設定（ここを書き換えてください）
+//  ・CONTACT_EMAIL: 表示・mailtoに使うメールアドレス
+//  ・CONTACT_FORM_URL: Googleフォーム等のURL（空なら非表示）
+// ================================================================
+const CONTACT_EMAIL = "your-email@example.com";
+const CONTACT_FORM_URL = ""; // 例: "https://forms.gle/xxxxxxxx"
+
 const { useState, useMemo, useRef, useEffect } = React;
 
 // ================================================================
@@ -691,15 +699,22 @@ function App() {
     <div style={{ background: C.bg, minHeight: "100vh", color: C.ink }}>
       <div className="wrap">
         <header className="top">
-          <div className="brand" onClick={() => setRoute("home")}><span className="brand-mark">¥</span> 連結粉飾 <span className="brand-vs">対局</span></div>
-          <div className="top-right">
-            <div className="brand-sub">CONSOLIDATED LEDGER DUEL</div>
-            {cloud.enabled && (
-              user
-                ? <button className="acct-chip" onClick={() => setRoute("mypage")}>👤 {(profile && profile.displayName) || "マイページ"}</button>
-                : <button className="acct-chip login" onClick={() => setRoute("login")}>ログイン</button>
-            )}
+          <div className="top-main">
+            <div className="brand" onClick={() => setRoute("home")}><span className="brand-mark">¥</span> 連結粉飾 <span className="brand-vs">対局</span></div>
+            <div className="top-right">
+              {cloud.enabled && (
+                user
+                  ? <button className="acct-chip" onClick={() => setRoute("mypage")}>👤 {(profile && profile.displayName) || "マイページ"}</button>
+                  : <button className="acct-chip login" onClick={() => setRoute("login")}>ログイン</button>
+              )}
+            </div>
           </div>
+          <nav className="topnav">
+            <button className={`nav-link ${route === "home" ? "active" : ""}`} onClick={() => setRoute("home")}>トップ</button>
+            <button className={`nav-link ${route === "build" ? "active" : ""}`} onClick={() => { resetBuild(); setRoute("build"); }}>作成</button>
+            <button className={`nav-link ${route === "library" ? "active" : ""}`} onClick={() => { setLoadError(""); setRoute("library"); }}>調査一覧</button>
+            <button className={`nav-link ${route === "rules" ? "active" : ""}`} onClick={() => setRoute("rules")}>あそびかた</button>
+          </nav>
         </header>
 
         {route === "home" && <Home history={history} user={user} profile={profile} onBuild={() => { resetBuild(); setRoute("build"); }} onLoad={() => { setLoadError(""); setRoute("library"); }} onRules={() => setRoute("rules")} onMine={() => setRoute("mine")} onLogin={() => setRoute("login")} onMypage={() => setRoute("mypage")} />}
@@ -721,6 +736,39 @@ function App() {
             accuseCircular={accuseCircular} setAccuseCircular={setAccuseCircular} accuseFx={accuseFx} toggleFxAccuse={toggleFxAccuse} onSubmit={grade} onTip={setTip} />
         )}
         {route === "result" && result && <Result result={result} onHome={() => setRoute("home")} onLibrary={() => setRoute("library")} onTip={setTip} />}
+
+        <footer className="site-footer">
+          <div className="footer-cols">
+            <div className="footer-col">
+              <div className="footer-brand"><span className="brand-mark">¥</span> 連結粉飾 対局</div>
+              <div className="footer-tag">Cooking the Books — 決算書の粉飾を作って暴く学習ゲーム</div>
+            </div>
+            <div className="footer-col">
+              <div className="footer-h">メニュー</div>
+              <button className="footer-link" onClick={() => setRoute("home")}>トップ</button>
+              <button className="footer-link" onClick={() => { resetBuild(); setRoute("build"); }}>出題を作る</button>
+              <button className="footer-link" onClick={() => { setLoadError(""); setRoute("library"); }}>調査一覧</button>
+              <button className="footer-link" onClick={() => setRoute("rules")}>あそびかた</button>
+            </div>
+            <div className="footer-col">
+              <div className="footer-h">アカウント</div>
+              {cloud.enabled
+                ? (user
+                    ? <button className="footer-link" onClick={() => setRoute("mypage")}>マイページ・ランキング</button>
+                    : <button className="footer-link" onClick={() => setRoute("login")}>ログイン / 新規登録</button>)
+                : <span className="footer-muted">ログイン機能は準備中</span>}
+            </div>
+            <div className="footer-col">
+              <div className="footer-h">お問い合わせ</div>
+              <a className="footer-link" href={`mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent("【連結粉飾 対局】お問い合わせ")}`}>メールで問い合わせ</a>
+              {CONTACT_FORM_URL && <a className="footer-link" href={CONTACT_FORM_URL} target="_blank" rel="noopener noreferrer">お問い合わせフォーム</a>}
+            </div>
+          </div>
+          <div className="footer-bottom">
+            <span>© {new Date().getFullYear()} 連結粉飾 対局</span>
+            <span className="footer-note">本ゲームは教育用に簡略化したモデルです。実際の会計基準とは異なります。</span>
+          </div>
+        </footer>
       </div>
 
       {tip && <TipModal tip={tip} onClose={() => setTip(null)} />}
