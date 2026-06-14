@@ -27,7 +27,7 @@ html, body { max-width: 100%; overflow-x: hidden; }
 .role-card.fraud:hover { border-color: #e5563f; } .role-card.invest:hover { border-color: #4cc6c0; }
 .role-icon { font-size: 34px; margin-bottom: 12px; }
 .role-card.fraud .role-icon { color: #e5563f; } .role-card.invest .role-icon { color: #4cc6c0; }
-.role-name { font-family: Georgia, 'Times New Roman', serif; font-size: 24px; font-weight: bold; margin-bottom: 8px; }
+.role-name { font-family: Georgia, 'Times New Roman', serif; font-size: 24px; font-weight: bold; margin-bottom: 8px; color: #e7eef5; }
 .role-desc { color: #8aa0b4; line-height: 1.6; font-size: 14px; margin-bottom: 16px; }
 .role-go { font-family: 'Courier New', ui-monospace, monospace; font-size: 13px; color: #d9a441; letter-spacing: 1px; }
 
@@ -565,11 +565,11 @@ html, body { max-width: 100%; overflow-x: hidden; }
 .start-here { background: linear-gradient(160deg, rgba(76,198,192,.08), rgba(217,164,65,.05)); border: 1.5px solid #2f3e4e; border-radius: 14px; padding: 20px; margin-bottom: 24px; }
 .start-label { font-family: 'Courier New', monospace; font-size: 13px; color: #4cc6c0; margin-bottom: 14px; text-align: center; }
 .start-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px; }
-.start-card { background: #18202a; border: 1.5px solid #2f3e4e; border-radius: 12px; padding: 20px 16px; cursor: pointer; text-align: center; transition: border-color .15s; }
+.start-card { background: #18202a; border: 1.5px solid #2f3e4e; border-radius: 12px; padding: 20px 16px; cursor: pointer; text-align: center; transition: border-color .15s; color: #e7eef5; }
 .start-card:hover { border-color: #4cc6c0; }
 .start-card.primary { border-color: #4cc6c0; background: rgba(76,198,192,.1); }
 .sc-emoji { font-size: 32px; margin-bottom: 8px; }
-.sc-title { font-family: Georgia, 'Times New Roman', serif; font-size: 17px; font-weight: bold; margin-bottom: 6px; }
+.sc-title { font-family: Georgia, 'Times New Roman', serif; font-size: 17px; font-weight: bold; margin-bottom: 6px; color: #e7eef5; }
 .sc-desc { font-size: 12px; color: #8aa0b4; line-height: 1.6; }
 .rules-link { display: block; width: 100%; text-align: center; background: transparent; border: none; color: #d9a441; font-size: 13.5px; cursor: pointer; padding: 8px; text-decoration: underline; }
 .role-divider { display: flex; align-items: center; text-align: center; color: #5a6f82; font-size: 12px; font-family: 'Courier New', monospace; margin: 8px 0 18px; }
