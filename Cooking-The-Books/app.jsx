@@ -823,7 +823,7 @@ function App() {
     const o = {
       v: 5, periodCount, preview: true,
       title: "プレビュー",
-      companies: companies.map((c) => ({ cid: c.cid, role: c.role, name: c.name, industry: c.industry, currency: c.currency, fxRate: c.fxRate, periods: c.periods, fin: curFin(c), hint: sanitizeText(c.hint || "", 120) })),
+      companies: companies.map((c) => ({ cid: c.cid, role: c.role, name: sanitizeText(c.name || "会社", 30), industry: c.industry, currency: c.currency, fxRate: c.fxRate, periods: c.periods, fin: curFin(c), hint: sanitizeText(c.hint || "", 120) })),
       internalTxns: internalTxns.map((t) => ({ from: t.from, to: t.to, amount: t.amount })),
       fakes: isClean ? [] : fakes, fxFakes, circular: false, clean: isClean,
     };
@@ -860,7 +860,7 @@ function App() {
       v: 5,
       periodCount,
       title: (multi ? `📅${periodCount}期 ` : "") + companies.map((c) => INDUSTRIES[c.industry].icon).join("") + " " + companies.length + "社",
-      companies: companies.map((c) => ({ cid: c.cid, role: c.role, name: c.name, industry: c.industry, currency: c.currency, fxRate: c.fxRate, periods: c.periods, fin: curFin(c), hint: sanitizeText(c.hint || "", 120) })),
+      companies: companies.map((c) => ({ cid: c.cid, role: c.role, name: sanitizeText(c.name || "会社", 30), industry: c.industry, currency: c.currency, fxRate: c.fxRate, periods: c.periods, fin: curFin(c), hint: sanitizeText(c.hint || "", 120) })),
       internalTxns: internalTxns.map((t) => ({ from: t.from, to: t.to, amount: t.amount })), fakes: isClean ? [] : fakes, fxFakes,
       circular: isClean ? false : internalTxns.some((t) => t.amount > (t.real || 0)),
       clean: isClean,
