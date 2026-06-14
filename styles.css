@@ -560,3 +560,27 @@ html, body { max-width: 100%; overflow-x: hidden; }
 .draft-msg { display: block; text-align: center; margin-top: 8px; font-size: 12.5px; color: #5bbf7a; font-family: 'Courier New', monospace; }
 .preview-banner { background: rgba(217,164,65,.12); border: 1px solid #d9a441; border-radius: 8px; padding: 12px 14px; font-size: 13px; color: #e7eef5; line-height: 1.7; margin-bottom: 16px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .preview-banner .small-btn { margin-left: auto; }
+
+/* ===== トップ 初心者導線 ===== */
+.start-here { background: linear-gradient(160deg, rgba(76,198,192,.08), rgba(217,164,65,.05)); border: 1.5px solid #2f3e4e; border-radius: 14px; padding: 20px; margin-bottom: 24px; }
+.start-label { font-family: 'Courier New', monospace; font-size: 13px; color: #4cc6c0; margin-bottom: 14px; text-align: center; }
+.start-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px; }
+.start-card { background: #18202a; border: 1.5px solid #2f3e4e; border-radius: 12px; padding: 20px 16px; cursor: pointer; text-align: center; transition: border-color .15s; }
+.start-card:hover { border-color: #4cc6c0; }
+.start-card.primary { border-color: #4cc6c0; background: rgba(76,198,192,.1); }
+.sc-emoji { font-size: 32px; margin-bottom: 8px; }
+.sc-title { font-family: Georgia, 'Times New Roman', serif; font-size: 17px; font-weight: bold; margin-bottom: 6px; }
+.sc-desc { font-size: 12px; color: #8aa0b4; line-height: 1.6; }
+.rules-link { display: block; width: 100%; text-align: center; background: transparent; border: none; color: #d9a441; font-size: 13.5px; cursor: pointer; padding: 8px; text-decoration: underline; }
+.role-divider { display: flex; align-items: center; text-align: center; color: #5a6f82; font-size: 12px; font-family: 'Courier New', monospace; margin: 8px 0 18px; }
+.role-divider::before, .role-divider::after { content: ""; flex: 1; border-top: 1px solid #2f3e4e; }
+.role-divider span { padding: 0 14px; }
+
+/* ===== 結果: 励まし・次へ ===== */
+.encourage-box { background: rgba(76,198,192,.08); border-left: 3px solid #4cc6c0; border-radius: 0 8px 8px 0; padding: 14px 16px; font-size: 14px; color: #e7eef5; line-height: 1.7; margin-bottom: 16px; }
+.next-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px; }
+.next-actions .btn { flex: 1; min-width: 180px; }
+@media (max-width: 560px) {
+  .start-cards { grid-template-columns: 1fr; }
+  .next-actions .btn { min-width: 100%; }
+}

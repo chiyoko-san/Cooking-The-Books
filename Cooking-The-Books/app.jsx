@@ -789,6 +789,7 @@ function App() {
   }
   const [buildWarn, setBuildWarn] = useState(null);
   const [previewMode, setPreviewMode] = useState(false);
+  const [lastLevel, setLastLevel] = useState(null); // 直近に遊んだ練習レベル
 
   // ===== 下書き保存・プレビュー =====
   const DRAFT_KEY = "fraudduel:draft:v1";
@@ -895,10 +896,30 @@ function App() {
 
   // 練習モード: レベルを選んで開始
   function startPractice(level) {
+    setLastLevel(level);
     const o = makePracticeChallenge(level);
     o.companies = o.companies.map((c) => c.periods ? c : { ...c, periods: [c.fin || emptyFin()] });
     setLoaded(o); setCurrentLid(null);
-    setAccusations([]); setAccuseCircular(false); setAccuseFx([]); setResult(null);
+    setAccusations([]); setAccuseCircular(false); setAccuseFx([]); setResult(null); setPreviewMode(false);
+    setRoute("investigate");
+  }
+  // 「次の問題へ」: 直近と同じくらいの難易度で1問
+  function nextPractice(level) {
+    const lv = level || lastLevel || PRACTICE_LEVELS[0];
+    startPractice(lv);
+  }
+  // 今日の1問: 日付シードで全員共通の1問（レベル4〜7のどれか＝歯ごたえあり）
+  function startDaily() {
+    const today = new Date();
+    const seed = today.getFullYear() * 10000 + (today.getMonth() + 1) * 100 + today.getDate();
+    const pool = PRACTICE_LEVELS.filter((l) => l.id >= 4); // 中級以上
+    const lv = pool[seed % pool.length];
+    setLastLevel(lv);
+    const o = makePracticeChallenge(lv);
+    o.title = "🗓 今日の1問";
+    o.companies = o.companies.map((c) => c.periods ? c : { ...c, periods: [c.fin || emptyFin()] });
+    setLoaded(o); setCurrentLid(null);
+    setAccusations([]); setAccuseCircular(false); setAccuseFx([]); setResult(null); setPreviewMode(false);
     setRoute("investigate");
   }
   // 公開出題（投稿）を遊ぶ
@@ -991,7 +1012,7 @@ function App() {
           </nav>
         </header>
 
-        {route === "home" && <Home history={history} user={user} profile={profile} onBuild={() => { resetBuild(); setRoute("build"); }} onLoad={() => { setLoadError(""); setRoute("library"); }} onRules={() => setRoute("rules")} onMine={() => setRoute("mine")} onLogin={() => setRoute("login")} onMypage={() => setRoute("mypage")} onPractice={() => setRoute("practice")} />}
+        {route === "home" && <Home history={history} user={user} profile={profile} onBuild={() => { resetBuild(); setRoute("build"); }} onLoad={() => { setLoadError(""); setRoute("library"); }} onRules={() => setRoute("rules")} onMine={() => setRoute("mine")} onLogin={() => setRoute("login")} onMypage={() => setRoute("mypage")} onPractice={() => setRoute("practice")} onDaily={startDaily} onExplore={() => setRoute("explore")} />}
         {route === "login" && <Login onBack={() => setRoute("home")} onDone={() => setRoute("mypage")} />}
         {route === "explore" && <Explore user={user} onPlay={playPost} onBack={() => setRoute("home")} onLogin={() => setRoute("login")} />}
         {route === "practice" && <Practice onStart={startPractice} onBack={() => setRoute("home")} />}
@@ -1014,7 +1035,7 @@ function App() {
             accuseCircular={accuseCircular} setAccuseCircular={setAccuseCircular} accuseFx={accuseFx} toggleFxAccuse={toggleFxAccuse} onSubmit={grade} onTip={setTip}
             previewMode={previewMode} onExitPreview={() => { setPreviewMode(false); setRoute("build"); }} />
         )}
-        {route === "result" && result && <Result result={result} onHome={() => setRoute("home")} onLibrary={() => setRoute("library")} onTip={setTip} />}
+        {route === "result" && result && <Result result={result} onHome={() => setRoute("home")} onLibrary={() => setRoute("library")} onTip={setTip} onNextPractice={nextPractice} onDaily={startDaily} lastLevel={lastLevel} />}
 
         <footer className="site-footer">
           <div className="footer-cols">
@@ -1433,7 +1454,7 @@ function LocalStatBlock({ local }) {
   );
 }
 
-function Home({ history, user, profile, onBuild, onLoad, onRules, onMine, onLogin, onMypage, onPractice }) {
+function Home({ history, user, profile, onBuild, onLoad, onRules, onMine, onLogin, onMypage, onPractice, onDaily, onExplore }) {
   const stats = useMemo(() => {
     const attempts = history.length;
     const tf = history.reduce((s, h) => s + (h.fakeTotal || 0), 0);
@@ -1441,24 +1462,44 @@ function Home({ history, user, profile, onBuild, onLoad, onRules, onMine, onLogi
     const wins = history.filter((h) => h.result === "win").length;
     return { attempts, discRate: tf > 0 ? Math.round((th / tf) * 100) : 0, wins };
   }, [history]);
+  const isNew = history.length === 0; // 初めての人か
   return (
     <div className="screen">
       <div className="hero">
-        <h1 className="hero-title">帳簿の嘘を、<br/>作る側か。暴く側か。</h1>
-        <p className="hero-lede">PL・BSのフル科目、業種、子会社、為替まで自由。粉飾者は数字に嘘を仕込み、調査官は財務諸表の整合から真実を引き出す。</p>
-        <button className="rules-cta" onClick={onRules}>📖 はじめての方へ — あそびかた＆例題を見る</button>
-        {onPractice && <button className="rules-cta practice-cta" onClick={onPractice}>🎯 練習モード — レベル1から1つずつ学ぶ</button>}
+        <h1 className="hero-title">決算書のウソを、<br/>見抜けるか？</h1>
+        <p className="hero-lede">会社の成績表「決算書」に隠された粉飾（数字のウソ）を探す推理ゲーム。会計を知らなくても、遊びながら数字に強くなれます。1問3分から。</p>
       </div>
+
+      {/* まずここから（初心者の入口を1本に） */}
+      <div className="start-here">
+        <div className="start-label">{isNew ? "▼ まずはここから" : "▼ 今日も1問どうぞ"}</div>
+        <div className="start-cards">
+          <button className="start-card primary" onClick={onPractice}>
+            <div className="sc-emoji">🎯</div>
+            <div className="sc-title">練習モードで遊ぶ</div>
+            <div className="sc-desc">レベル1から1つずつ。これが一番やさしい入口です。</div>
+          </button>
+          <button className="start-card" onClick={onDaily}>
+            <div className="sc-emoji">🗓</div>
+            <div className="sc-title">今日の1問</div>
+            <div className="sc-desc">毎日変わる1問。みんな同じ問題に挑戦。</div>
+          </button>
+        </div>
+        <button className="rules-link" onClick={onRules}>📖 ルールと例題を読む（初めての方へ）</button>
+      </div>
+
+      <div className="role-divider"><span>もっと遊ぶ</span></div>
+
       <div className="role-grid">
-        <button className="role-card fraud" onClick={onBuild}>
-          <div className="role-icon">✎</div><div className="role-name">粉飾者になる</div>
-          <div className="role-desc">PL/BSを作り、架空計上を仕込む。基本科目から始め、必要に応じ詳細科目を追加。出題リンク/コードを発行。</div>
-          <div className="role-go">出題を作る →</div>
+        <button className="role-card invest" onClick={onExplore}>
+          <div className="role-icon">🌐</div><div className="role-name">公開出題に挑む</div>
+          <div className="role-desc">みんなが作った出題に挑戦。いいね・保存もできます。</div>
+          <div className="role-go">公開出題へ →</div>
         </button>
-        <button className="role-card invest" onClick={onLoad}>
-          <div className="role-icon">⚲</div><div className="role-name">調査官になる</div>
-          <div className="role-desc">受け取った出題を一覧で管理。発見率・挑戦数で難易度を見極め、挑むものを選ぶ。</div>
-          <div className="role-go">調査一覧へ →</div>
+        <button className="role-card fraud" onClick={onBuild}>
+          <div className="role-icon">✎</div><div className="role-name">出題を作る</div>
+          <div className="role-desc">自分で決算書を作り、ウソを仕込んで出題。リンクで送る・公開する。</div>
+          <div className="role-go">作る →</div>
         </button>
       </div>
       <div className="mine-link-row">
@@ -2627,7 +2668,7 @@ function explainFake(company, key) {
   }
 }
 
-function Result({ result, onHome, onLibrary, onTip }) {
+function Result({ result, onHome, onLibrary, onTip, onNextPractice, onDaily, lastLevel }) {
   const { score, detail, truth } = result;
   const nameOf = (cid) => truth.companies.find((c) => c.cid === cid)?.name || cid;
   let verdict, vmsg;
@@ -2635,12 +2676,27 @@ function Result({ result, onHome, onLibrary, onTip }) {
   else if (score >= 10) { verdict = "調査官の勝ち"; vmsg = "嘘の核心を捉えた。"; }
   else if (score >= -5) { verdict = "引き分け圏"; vmsg = "詰めが甘い。逃げ道を残した。"; }
   else { verdict = "粉飾者の勝ち"; vmsg = "数字の罠に飲まれた。"; }
+  // 前向きな一言（特に負け・引き分けのとき優しく）
+  const hits = result.hits || 0, total = result.fakeTotal || 0;
+  let encourage = "";
+  if (truth.cleanCo && score >= 10) encourage = "「シロ」を冷静に見抜けました。疑いすぎないのも実力です。";
+  else if (score >= 30) encourage = "完璧です。もう立派な調査官。次はもっと手強い相手を。";
+  else if (score >= 10) encourage = "いい読みでした。この調子でいきましょう。";
+  else if (total > 0 && hits > 0) encourage = `惜しい！ ${total}個中 ${hits}個は見抜けました。あと少し。下の「おさらい」で見抜き方を確認して、もう1問。`;
+  else if (total > 0) encourage = "今回は難しかったですね。下の「おさらい」に見抜き方が書いてあります。同じ手口は次から分かります。";
+  else encourage = "もう1問チャレンジして、感覚をつかみましょう。";
   return (
     <div className="screen">
       <div className="result-head">
         <div className="result-verdict">{verdict}</div>
         <div className="result-score" style={{ color: score >= 0 ? C.green : C.red }}>{score >= 0 ? "+" : ""}{score}</div>
         <div className="muted">{vmsg}</div>
+      </div>
+      <div className="encourage-box">{encourage}</div>
+      {/* 次へ（熱が冷めないうちに） */}
+      <div className="next-actions">
+        {onNextPractice && <button className="btn primary" onClick={() => onNextPractice(lastLevel)}>▶ 次の問題へ（同じくらいの難しさ）</button>}
+        {onDaily && <button className="btn ghost" onClick={onDaily}>🗓 今日の1問に挑戦</button>}
       </div>
       <div className="result-detail">{detail.map((d, i) => <div key={i} className={`rd-line ${d.ok ? "ok" : "ng"}`}><span className="rd-icon">{d.ok ? "✓" : "✕"}</span>{d.txt}</div>)}</div>
       <div className="truth-box">
