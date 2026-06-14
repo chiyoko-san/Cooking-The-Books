@@ -272,6 +272,32 @@ function totalAssets(f) { return BS_ASSET_KEYS.reduce((s, k) => s + num(f, k), 0
 function totalLiabEquity(f) { return BS_LIAB_KEYS.reduce((s, k) => s + num(f, k), 0); }
 function bsGap(f) { return totalAssets(f) - totalLiabEquity(f); }
 
+// ---- キャッシュフロー計算書（間接法・簡易）-------------------
+// 当期fin と 前期prevFin の差分から3区分CFを導く。
+// 減価償却は固定資産の一定率(depRate)を仮定し、営業CFに足し戻す＝現実に近い形。
+// 戻り値の cashDelta（=営業+投資+財務）は、現金の期差に概ね一致するよう設計。
+function cashFlow(fin, prevFin, depRate = 0.05) {
+  if (!prevFin) return null;
+  const d = (k) => num(fin, k) - num(prevFin, k); // 当期増加（プラス＝増えた）
+  const ni = netIncome(fin);
+  // 減価償却費（前期末固定資産 × 率）。投資CFと営業CFで整合させる。
+  const dep = Math.max(0, Math.round(num(prevFin, "fixedAssets") * depRate));
+  // 営業CF：純利益 ＋ 減価償却 − 運転資本の増加（売掛・在庫の増は現金流出、買掛の増は現金流入）
+  const wcUp = d("receivables") + d("inventory") - d("payables");
+  const cfo = ni + dep - wcUp;
+  // 投資CF：固定資産の純増 ＋ 当期減価償却 ＝ おおよその設備投資（流出）
+  const capex = d("fixedAssets") + dep;
+  const cfi = -capex;
+  // 財務CF：借入金の純増（流入）＋ 増資など（ここでは純資産のうち利益剰余以外の動き＝近似で0）
+  const cff = d("shortDebt") + d("longDebt");
+  const cashDelta = cfo + cfi + cff;
+  return {
+    cfo, cfi, cff, cashDelta, dep,
+    niMinusCfo: ni - cfo,           // 利益と営業CFの乖離（プラス大＝危険サイン）
+    actualCashDelta: d("cash"),     // 実際の現金増減（参考）
+  };
+}
+
 const rnd = (a, b) => Math.floor(Math.random() * (b - a + 1)) + a;
 const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
 const uid = () => Math.random().toString(36).slice(2, 8);
@@ -338,6 +364,112 @@ function genHealthyFin(industryKey) {
   f.longDebt = debtTotal - f.shortDebt;
   f.equity = assets - f.payables - f.shortDebt - f.longDebt; // 残差＝必ず均衡
   return f;
+}
+
+// ===== 超級: 循環取引型・複数期の生成 =====
+// 設計: parent(親) と sub(連結子会社) の2社。子会社で架空循環取引による売上を計上。
+// 架空売上は現金を生まず売掛金に滞留 → 営業CFが利益から乖離 → 不足を親会社からのグループ融資(長期借入)で穴埋め。
+// これを3期、規模を年々拡大させて、CFの悪化が時系列で見える形にする。
+// 返り値: { companies, internalTxns, fakes, fxFakes, periodCount, clean:false }
+function genCircularElite(periodCount = 3) {
+  const pcount = Math.max(2, Math.min(4, periodCount));
+  const parentInd = "services";   // 広告代理など
+  const subInd = "software";
+  // --- 子会社の各期を生成（健全ベース → 架空循環を年々上乗せ）---
+  const subBase = genHealthyFin(subInd);
+  const subPeriods = [];
+  let prevSub = null;
+  for (let t = 0; t < pcount; t++) {
+    // 健全な事業の自然成長（年5〜12%）
+    const g = 1 + (rnd(5, 12) / 100) * t;
+    const f = emptyFin();
+    f.sales = Math.round(subBase.sales * g);
+    f.cogs = Math.round(f.sales * (num(subBase, "cogs") / num(subBase, "sales")));
+    f.sga = Math.round(subBase.sga * g);
+    f.nonOpInc = Math.round(subBase.nonOpInc * g);
+    f.nonOpExp = Math.round(subBase.nonOpExp * g);
+    f.receivables = Math.round(subBase.receivables * g);
+    f.inventory = Math.round(subBase.inventory * g);
+    f.fixedAssets = Math.round(subBase.fixedAssets * g);
+    f.payables = Math.round(subBase.payables * g);
+
+    // --- 架空循環取引の上乗せ（規模は年々拡大: t=0でも少し、t増で大きく）---
+    const fakeRate = 0.18 + 0.10 * t; // 売上に対する架空比率が年々増加
+    const fakeSales = Math.round(f.sales * fakeRate);
+    f.sales += fakeSales;
+    f.cogs += Math.round(fakeSales * 0.85); // 循環なので原価もほぼ同額計上（利益は薄い）
+    // 架空売上は現金回収されず売掛金に滞留（全額＋既存売掛）
+    f.receivables += Math.round(fakeSales * 1.05);
+
+    // 税金（架空利益にも課税される＝現金流出）
+    const pretax = (f.sales - f.cogs - f.sga) + f.nonOpInc - f.nonOpExp;
+    f.tax = Math.max(0, Math.round(pretax * (rnd(30, 34) / 100)));
+
+    // --- 資金繰り: 売掛膨張で不足する現金を、親会社グループ融資(長期借入)で補填 ---
+    // まず現金を健全水準に置き、不足分を長期借入で賄う構造にする
+    f.cash = Math.max(30, Math.round(subBase.cash * g * 0.4)); // 現金は薄い（循環で枯渇気味）
+    const assets = f.cash + f.receivables + f.inventory + f.fixedAssets;
+    // 借入: 売掛膨張に連動して年々拡大（グループ融資の原資）
+    f.shortDebt = Math.round(subBase.sales * 0.05 * g);
+    f.longDebt = Math.round(fakeSales * 1.1 * (1 + 0.2 * t)); // 架空売上を借入で支える
+    // 純資産は残差で均衡（薄利なので積み上がりは小さい）
+    f.equity = assets - f.payables - f.shortDebt - f.longDebt;
+    // 純資産が極端なマイナスにならないよう、不足は長期借入を圧縮して調整
+    if (f.equity < Math.round(assets * 0.05)) {
+      const need = Math.round(assets * 0.05) - f.equity;
+      f.longDebt = Math.max(0, f.longDebt - need);
+      f.equity = assets - f.payables - f.shortDebt - f.longDebt;
+    }
+    subPeriods.push(f);
+    prevSub = f;
+  }
+
+  // --- 親会社の各期（健全。子会社へのグループ融資を貸付として持つ）---
+  const parentBase = genHealthyFin(parentInd);
+  // 親は子より規模大きめに
+  const scale = 1.6;
+  const parentPeriods = [];
+  for (let t = 0; t < pcount; t++) {
+    const g = 1 + (rnd(4, 9) / 100) * t;
+    const f = emptyFin();
+    f.sales = Math.round(parentBase.sales * scale * g);
+    f.cogs = Math.round(f.sales * (num(parentBase, "cogs") / num(parentBase, "sales")));
+    f.sga = Math.round(parentBase.sga * scale * g);
+    f.nonOpInc = Math.round(parentBase.nonOpInc * scale * g);
+    f.nonOpExp = Math.round(parentBase.nonOpExp * scale * g);
+    const pretax = (f.sales - f.cogs - f.sga) + f.nonOpInc - f.nonOpExp;
+    f.tax = Math.max(0, Math.round(pretax * (rnd(30, 34) / 100)));
+    f.receivables = Math.round(parentBase.receivables * scale * g);
+    f.inventory = Math.round(parentBase.inventory * scale * g);
+    f.fixedAssets = Math.round(parentBase.fixedAssets * scale * g);
+    f.payables = Math.round(parentBase.payables * scale * g);
+    f.cash = Math.max(60, Math.round(parentBase.cash * scale * g));
+    const assets = f.cash + f.receivables + f.inventory + f.fixedAssets;
+    let debtTotal = Math.round(assets * (rnd(25, 40) / 100));
+    f.shortDebt = Math.round(debtTotal * 0.4);
+    f.longDebt = debtTotal - f.shortDebt;
+    f.equity = assets - f.payables - f.shortDebt - f.longDebt;
+    parentPeriods.push(f);
+  }
+
+  const pcid = "pe" + Math.random().toString(36).slice(2, 6);
+  const scid = "se" + Math.random().toString(36).slice(2, 6);
+  // 内部取引（循環取引の痕跡として、親子間の取引額を提示）
+  const lastSub = subPeriods[pcount - 1];
+  const internalTxns = [{ from: pcid, to: scid, amount: Math.round(num(lastSub, "longDebt") * 0.6) }];
+
+  return {
+    v: 5, periodCount: pcount, elite: true, hasCF: true,
+    title: "超級 循環取引の罠",
+    companies: [
+      { cid: pcid, role: "parent", name: "親会社（持株）", industry: parentInd, currency: "JPY", fxRate: 1, periods: parentPeriods, fin: parentPeriods[pcount - 1], hint: "" },
+      { cid: scid, role: "sub", name: "広告子会社", industry: subInd, currency: "JPY", fxRate: 1, periods: subPeriods, fin: subPeriods[pcount - 1],
+        hint: "売上は伸びているが…現金の動き（CF）と借入の増え方に注目。" },
+    ],
+    internalTxns,
+    fakes: [{ cid: scid, key: "sales" }, { cid: scid, key: "receivables" }],
+    fxFakes: [], circular: true, clean: false,
+  };
 }
 
 // ---- 粉飾を仕込む（各手口が必ず「調査官に見える痕跡」を残す） -----
@@ -438,14 +570,18 @@ function consolidate(companies, internalTxns) {
 
 // ===== 練習モード: 難易度レベル定義 =====
 const PRACTICE_LEVELS = [
-  { id: 1, name: "レベル1 売上の嘘", learn: "架空売上を見抜く。売れているのに代金（売掛金）が入っていないのがサイン。", tactics: ["fakeSales"], clean: false, industries: ["retail", "manufacturing"] },
-  { id: 2, name: "レベル2 原価のごまかし", learn: "売上原価を在庫に付け替える手口。原価率が下がり在庫が積み上がる。", tactics: ["deferCost"], clean: false, industries: ["manufacturing", "retail"] },
-  { id: 3, name: "レベル3 在庫の水増し", learn: "在庫を過大計上。在庫回転日数が異常に長くなる。", tactics: ["padInventory"], clean: false, industries: ["manufacturing", "trading"] },
-  { id: 4, name: "レベル4 損失隠し", learn: "計上すべき特別損失を資産に残す。貸借が一致しなくなる。", tactics: ["hideExtraLoss"], clean: false, industries: ["manufacturing", "construction"] },
-  { id: 5, name: "レベル5 税金と負債", learn: "税金の過小計上・借入金の簿外化。税率や貸借差額に出る。", tactics: ["underTax", "hideDebt"], clean: false, industries: ["software", "services"] },
-  { id: 6, name: "レベル6 健全を見抜く", learn: "あえて粉飾の無い決算。むやみに疑わず「シロ」と見抜けるか。", tactics: [], clean: true, industries: ["retail", "software", "services"] },
-  { id: 7, name: "レベル7 実戦（複合）", learn: "複数の手口がランダムに仕込まれる。総合力が試される本番形式。", tactics: null, clean: false, industries: ["manufacturing", "retail", "software", "construction", "trading", "services"] },
+  { id: 1, name: "初級① 売上の嘘", tier: "初級", learn: "架空売上を見抜く。売れているのに代金（売掛金）が入っていないのがサイン。", tactics: ["fakeSales"], clean: false, industries: ["retail", "manufacturing"] },
+  { id: 2, name: "初級② 原価のごまかし", tier: "初級", learn: "売上原価を在庫に付け替える手口。原価率が下がり在庫が積み上がる。", tactics: ["deferCost"], clean: false, industries: ["manufacturing", "retail"] },
+  { id: 3, name: "初級③ 在庫の水増し", tier: "初級", learn: "在庫を過大計上。在庫回転日数が異常に長くなる。", tactics: ["padInventory"], clean: false, industries: ["manufacturing", "trading"] },
+  { id: 4, name: "中級① 損失隠し", tier: "中級", learn: "計上すべき特別損失を資産に残す。貸借が一致しなくなる。", tactics: ["hideExtraLoss"], clean: false, industries: ["manufacturing", "construction"] },
+  { id: 5, name: "中級② 税金と負債", tier: "中級", learn: "税金の過小計上・借入金の簿外化。税率や貸借差額に出る。", tactics: ["underTax", "hideDebt"], clean: false, industries: ["software", "services"] },
+  { id: 6, name: "中級③ 健全を見抜く", tier: "中級", learn: "あえて粉飾の無い決算。むやみに疑わず「シロ」と見抜けるか。", tactics: [], clean: true, industries: ["retail", "software", "services"] },
+  { id: 7, name: "上級 実戦（複合）", tier: "上級", learn: "複数の手口がランダムに仕込まれる。総合力が試される本番形式。", tactics: null, clean: false, industries: ["manufacturing", "retail", "software", "construction", "trading", "services"] },
+  { id: 8, name: "超級 循環取引の罠", tier: "超級", learn: "KDDI事件型。子会社の架空循環取引で増収増益に見えるが、現金（CF）が伴わない。営業CFと利益の乖離、借入による穴埋めを見抜く。複数期・CF計算書つき。", generator: "circularElite", clean: false, industries: [] },
 ];
+
+// レベルに対応する称号
+const RANK_TITLES = { "初級": "新人調査官", "中級": "会計係", "上級": "公認会計士", "超級": "主任監査人", "最難級": "不正会計のプロ" };
 
 // 指定タクティクスのみで粉飾（痕跡保証つき、最大16回再試行）
 function injectFraudTactics(fin, industryKey, tactics) {
@@ -494,6 +630,10 @@ function injectFraudTactics(fin, industryKey, tactics) {
 
 // レベルから1社の練習出題（payload）を生成
 function makePracticeChallenge(level) {
+  // 超級: 循環取引×複数期×CF
+  if (level.generator === "circularElite") {
+    return genCircularElite(3);
+  }
   const ind = level.industries[rnd(0, level.industries.length - 1)];
   if (level.clean) {
     const fin = genHealthyFin(ind);
@@ -1939,22 +2079,24 @@ function Builder({ companies, setCompanies, internalTxns, setInternalTxns, fakes
 // ================================================================
 // ===== 練習モード（レベル選択） =====
 function Practice({ onStart, onBack }) {
+  const tierColor = { "初級": "#5bbf7a", "中級": "#4cc6c0", "上級": "#d9a441", "超級": "#e5563f", "最難級": "#b15be0" };
   return (
     <div className="screen">
-      <div className="section-head"><h2 className="h2">練習モード</h2><p className="muted">やさしいレベルから1つずつ。各レベルで1つの手口に集中して、見抜き方を体で覚えましょう。数字が苦手でも大丈夫。</p></div>
+      <div className="section-head"><h2 className="h2">練習モード</h2><p className="muted">初級から超級まで段階別。やさしい入口から、KDDI事件型の循環取引まで。各段位をクリアして称号を集めよう。数字が苦手でも初級から大丈夫。</p></div>
       <div className="practice-list">
         {PRACTICE_LEVELS.map((lv) => (
-          <button className="practice-card" key={lv.id} onClick={() => onStart(lv)}>
-            <div className="pc-badge">{lv.id}</div>
+          <button className="practice-card" key={lv.id} onClick={() => onStart(lv)} style={{ borderLeftColor: tierColor[lv.tier] || "#2f3e4e", borderLeftWidth: 4 }}>
+            <div className="pc-badge" style={{ borderColor: tierColor[lv.tier], color: tierColor[lv.tier] }}>{lv.id}</div>
             <div className="pc-body">
-              <div className="pc-name">{lv.name}{lv.clean && <span className="pc-clean">シロ</span>}{lv.tactics === null && <span className="pc-real">実戦</span>}</div>
+              <div className="pc-name">{lv.name}{lv.clean && <span className="pc-clean">シロ</span>}{lv.tactics === null && <span className="pc-real">実戦</span>}{lv.generator && <span className="pc-elite">CF・複数期</span>}</div>
+              <div className="pc-tier" style={{ color: tierColor[lv.tier] }}>{lv.tier}　称号「{RANK_TITLES[lv.tier]}」</div>
               <div className="pc-learn">{lv.learn}</div>
             </div>
             <div className="pc-go">挑戦 →</div>
           </button>
         ))}
       </div>
-      <div className="practice-note">💡 練習モードは1社・単期で、成績ランキングには影響しません。気軽に何度でも挑戦できます。慣れたら「作成」で自作したり「公開出題」でみんなの問題に挑みましょう。</div>
+      <div className="practice-note">💡 練習はランキングに影響しません。何度でも挑戦OK。<b>超級</b>はキャッシュフロー計算書つきの本格問題です。慣れたら「作成」で自作したり「公開出題」でみんなの問題に挑みましょう。</div>
       <div className="btn-row"><button className="btn ghost" onClick={onBack}>トップへ</button></div>
     </div>
   );
@@ -2395,6 +2537,13 @@ function Investigate({ data, accusations, setAccusations, accuseCircular, setAcc
       <div className="section-head"><h2 className="h2">{previewMode ? "プレビュー（調査官の見え方）" : "審査室"}</h2>
         <p className="muted">各科目をタップで指摘。科目名の「?」で説明。業種基準の比率異常・税率の不自然さ・BSの貸借不均衡・為替・連結のズレが手がかり。健全なら何も告発しないのが正解。</p></div>
 
+      {data.hasCF && (
+        <div className="cf-guide">
+          <div className="cf-guide-title">🗝 超級の鍵：キャッシュフロー（CF）を読む</div>
+          <p>循環取引による架空売上は、<b>利益は増えても現金は入りません</b>（売掛金に滞留するだけ）。だから<b>「当期純利益は大きいのに、営業CFが小さい・マイナス」</b>が最大の手がかり。さらにその穴を借入（財務CF＝プラス）で埋めていれば、ほぼ確定です。各社のCF計算書と、売上・利益・営業CFの<b>時系列の食い違い</b>に注目してください。怪しい科目（売上・売掛金）をタップで指摘します。</p>
+        </div>
+      )}
+
       <div className="invest-companies">
         {companies.map((c) => {
           const cf = curFin(c);
@@ -2468,6 +2617,31 @@ function Investigate({ data, accusations, setAccusations, accuseCircular, setAcc
                 {showTax && <Chip label="実効税率" v={r.taxRate} unit="%" warn={fl.tax === "warn"} infoKey="taxRate" onTip={onTip} />}
                 {(liabKeys.length > 0 || Math.abs(r.bsGap) > 0.5) && <Chip label="貸借差額" v={r.bsGap} unit="" warn={fl.bs === "warn"} infoKey="bsGap" onTip={onTip} />}
               </div>
+
+              {data.hasCF && np > 1 && (() => {
+                const cfNow = cashFlow(c.periods[np - 1], c.periods[np - 2]);
+                if (!cfNow) return null;
+                const ni = netIncome(c.periods[np - 1]);
+                const danger = cfNow.cfo < ni * 0.5; // 営業CFが利益の半分未満＝危険
+                return (
+                  <div className={`cf-box ${danger ? "cf-danger" : ""}`}>
+                    <div className="cf-title">キャッシュフロー計算書（当期）
+                      <button className="it-tip" onClick={() => onTip({ label: "キャッシュフロー計算書", desc: "会社に実際に出入りした現金の流れ。利益は会計操作で作れるが現金は嘘をつきにくい。『利益は大きいのに営業CFが小さい/マイナス』は粉飾の最重要サイン。架空売上は現金を生まず売掛金に滞留するため、営業CFが利益から大きく乖離する。" })}>?</button>
+                    </div>
+                    <table className="cf-table"><tbody>
+                      <tr><td>営業活動によるCF</td><td className={`cf-val ${cfNow.cfo < 0 ? "neg" : ""}`}>{cur.sym}{fmt(cfNow.cfo)}</td></tr>
+                      <tr><td>投資活動によるCF</td><td className={`cf-val ${cfNow.cfi < 0 ? "neg" : ""}`}>{cur.sym}{fmt(cfNow.cfi)}</td></tr>
+                      <tr><td>財務活動によるCF</td><td className={`cf-val ${cfNow.cff < 0 ? "neg" : ""}`}>{cur.sym}{fmt(cfNow.cff)}</td></tr>
+                      <tr className="cf-sum"><td>現金の増減</td><td className="cf-val">{cur.sym}{fmt(cfNow.cashDelta)}</td></tr>
+                    </tbody></table>
+                    <div className={`cf-flag ${danger ? "on" : ""}`}>
+                      {danger
+                        ? `⚑ 当期純利益 ${cur.sym}${fmt(ni)} に対し、営業CFは ${cur.sym}${fmt(cfNow.cfo)}。利益ほど現金が入っていない（差 ${cur.sym}${fmt(cfNow.niMinusCfo)}）。架空売上の疑い。`
+                        : `利益 ${cur.sym}${fmt(ni)} と営業CF ${cur.sym}${fmt(cfNow.cfo)} は概ね整合。`}
+                    </div>
+                  </div>
+                );
+              })()}
 
               {c.currency !== "JPY" && (
                 <label className={`fx-accuse ${accuseFx.includes(c.cid) ? "on" : ""}`}>

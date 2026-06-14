@@ -584,3 +584,20 @@ html, body { max-width: 100%; overflow-x: hidden; }
   .start-cards { grid-template-columns: 1fr; }
   .next-actions .btn { min-width: 100%; }
 }
+
+/* ===== キャッシュフロー計算書 ===== */
+.cf-guide { background: rgba(229,86,63,.08); border: 1.5px solid #e5563f; border-radius: 10px; padding: 16px; margin-bottom: 18px; }
+.cf-guide-title { font-family: Georgia, serif; font-size: 16px; font-weight: bold; color: #e5563f; margin-bottom: 8px; }
+.cf-guide p { font-size: 13px; color: #e7eef5; line-height: 1.8; }
+.cf-box { background: #0f1419; border: 1px solid #2f3e4e; border-radius: 8px; padding: 12px 14px; margin: 12px 0; }
+.cf-box.cf-danger { border-color: #e5563f; background: rgba(229,86,63,.06); }
+.cf-title { font-size: 13px; font-weight: bold; color: #8aa0b4; margin-bottom: 8px; display: flex; align-items: center; gap: 4px; }
+.cf-table { width: 100%; font-size: 13px; }
+.cf-table td { padding: 4px 2px; color: #e7eef5; }
+.cf-table td.cf-val { text-align: right; font-family: 'Courier New', monospace; }
+.cf-table td.cf-val.neg { color: #e5563f; }
+.cf-table tr.cf-sum td { border-top: 1px solid #2f3e4e; padding-top: 6px; font-weight: bold; }
+.cf-flag { margin-top: 8px; font-size: 12px; color: #8aa0b4; line-height: 1.6; }
+.cf-flag.on { color: #e5563f; font-weight: 600; }
+.pc-elite { font-size: 10px; background: #e5563f; color: #fff; padding: 1px 7px; border-radius: 4px; margin-left: 8px; }
+.pc-tier { font-size: 11px; font-family: 'Courier New', monospace; margin: 2px 0 4px; }
