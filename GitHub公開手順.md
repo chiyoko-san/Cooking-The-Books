@@ -147,7 +147,14 @@ Firebaseコンソール → 「Authentication」→「始める」→「Sign-in 
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // 自分の成績・プロフィールは自分だけ書き込み可、ランキング表示のため読み取りは全員可
+
+    // 管理者判定用
+    function isAdmin() {
+      return request.auth != null
+        && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+
+    // 成績・プロフィール（本人のみ書き込み、表示は全員）
     match /stats/{uid} {
       allow read: if true;
       allow write: if request.auth != null && request.auth.uid == uid;
@@ -155,12 +162,64 @@ service cloud.firestore {
     match /users/{uid} {
       allow read: if true;
       allow write: if request.auth != null && request.auth.uid == uid;
+      // 保存（ブックマーク）・いいね履歴は本人のみ
+      match /saved/{postId} {
+        allow read, write: if request.auth != null && request.auth.uid == uid;
+      }
+      match /liked/{postId} {
+        allow read, write: if request.auth != null && request.auth.uid == uid;
+      }
+    }
+
+    // 管理者リスト（読み取りのみ。追加はコンソールで手動）
+    match /admins/{uid} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+
+    // 公開出題
+    match /posts/{postId} {
+      allow read: if true;
+      // 投稿はログイン必須・本人のownerUidのみ
+      allow create: if request.auth != null
+        && request.resource.data.ownerUid == request.auth.uid
+        && request.resource.data.likeCount == 0
+        && request.resource.data.reportCount == 0
+        && request.resource.data.hidden == false
+        && request.resource.data.title is string
+        && request.resource.data.title.size() <= 60;
+      // 更新は「いいね/通報のカウント変更」か管理者か投稿者本人
+      allow update: if request.auth != null;
+      // 削除は投稿者本人か管理者
+      allow delete: if request.auth != null
+        && (resource.data.ownerUid == request.auth.uid || isAdmin());
+
+      // いいね（1人1件、本人のみ）
+      match /likes/{uid} {
+        allow read: if true;
+        allow write: if request.auth != null && request.auth.uid == uid;
+      }
+      // 通報（1人1件、本人のみ）
+      match /reports/{uid} {
+        allow read: if isAdmin();
+        allow create: if request.auth != null && request.auth.uid == uid;
+        allow update, delete: if false;
+      }
     }
   }
 }
 ```
 
-### 6. 公開ドメインを許可（Googleログイン用）
+> 補足: いいね・通報はアプリ側でトランザクション処理してカウントを増減します。`update` を緩めにしているのはそのためです。より厳密にしたい場合は Cloud Functions を使う方法がありますが、まずはこの構成で運用できます。
+
+### 6. あなたを管理者にする
+管理画面（通報の確認・削除）を使うには、自分のUIDを `admins` に登録します。
+1. 一度サイトでログインする（メールかGoogleで）
+2. Firebaseコンソール → Authentication → 「Users」タブで、自分の行の **ユーザーUID** をコピー
+3. Firestore Database → 「データの開始」→ コレクションID `admins` を作成 → ドキュメントID に**コピーしたUID**を貼り、フィールドは何でも可（例: `role` = `"admin"`）→ 保存
+4. サイトを再読み込みすると、ナビに赤い「管理」が出ます
+
+### 7. 公開ドメインを許可（Googleログイン用）
 Authentication →「Settings」→「承認済みドメイン」に
 `chiyoko-san.github.io` を追加（無ければ）。
 
