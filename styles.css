@@ -478,3 +478,31 @@ html, body { max-width: 100%; overflow-x: hidden; }
   .topnav { overflow-x: auto; flex-wrap: nowrap; -webkit-overflow-scrolling: touch; }
   .nav-link { flex-shrink: 0; }
 }
+
+/* ===== 公開出題板 / 管理画面 ===== */
+.nav-link.admin { color: #e5563f; }
+.nav-link.admin.active { border-bottom-color: #e5563f; }
+.post-card { background: #18202a; border: 1.5px solid #2f3e4e; border-radius: 10px; overflow: hidden; }
+.post-main { display: flex; align-items: center; gap: 12px; padding: 14px 16px; cursor: pointer; }
+.post-main:hover { background: #1c2531; }
+.post-info { flex: 1; min-width: 0; }
+.post-play { font-family: 'Courier New', monospace; font-size: 12px; color: #d9a441; flex-shrink: 0; }
+.post-clean { font-size: 10px; background: #5bbf7a; color: #0f1419; padding: 1px 7px; border-radius: 4px; margin-left: 6px; }
+.post-actions { display: flex; gap: 8px; padding: 0 16px 12px; }
+.like-btn { font-family: 'Courier New', monospace; font-size: 13px; padding: 6px 14px; border-radius: 16px; border: 1px solid #2f3e4e; background: transparent; color: #8aa0b4; cursor: pointer; }
+.like-btn.on { border-color: #e5563f; color: #e5563f; background: rgba(229,86,63,.1); }
+.report-btn { font-family: 'Courier New', monospace; font-size: 12px; padding: 6px 12px; border-radius: 16px; border: 1px solid #2f3e4e; background: transparent; color: #5a6f82; cursor: pointer; }
+.report-btn:hover { color: #e5563f; border-color: #e5563f; }
+.report-reasons { display: flex; flex-direction: column; gap: 8px; }
+.report-reason { text-align: left; }
+.toast { position: fixed; left: 50%; transform: translateX(-50%); top: 16px; background: #202b38; border: 1px solid #4cc6c0; color: #e7eef5; padding: 10px 18px; border-radius: 8px; font-size: 13px; z-index: 200; }
+.publish-block { border-color: #4cc6c0; }
+.pub-done { color: #5bbf7a; font-size: 14px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.admin-card { display: flex; align-items: center; gap: 12px; background: #18202a; border: 1.5px solid #2f3e4e; border-radius: 10px; padding: 14px 16px; }
+.admin-card.hidden-post { opacity: 0.6; border-style: dashed; }
+.admin-info { flex: 1; min-width: 0; }
+.admin-actions { display: flex; gap: 8px; flex-shrink: 0; }
+.report-count { color: #e5563f; }
+.post-hidden-tag { font-size: 10px; background: #5a6f82; color: #0f1419; padding: 1px 7px; border-radius: 4px; }
+.post-pre-tag { font-size: 10px; }
+@media (max-width: 560px) { .admin-card { flex-direction: column; align-items: stretch; } .admin-actions { justify-content: flex-end; } }
