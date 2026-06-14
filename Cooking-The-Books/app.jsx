@@ -231,25 +231,25 @@ const DISP = "Georgia, 'Times New Roman', serif";
 // desc: タップで出る説明
 const ACCOUNTS = [
   // ===== 損益計算書 PL =====
-  { key: "sales",        label: "売上高",       stmt: "pl", tier: "basic",  desc: "本業で得た収益の総額。架空売上（実在しない取引の計上）の典型的ターゲット。膨らませると売掛金や利益にも波及する。" },
-  { key: "cogs",         label: "売上原価",     stmt: "pl", tier: "basic",  desc: "売った商品・サービスにかかった直接費用。意図的に小さく見せる（在庫へ付け替える）と粗利が水増しされる。" },
-  { key: "sga",          label: "販管費",       stmt: "pl", tier: "basic",  desc: "販売費及び一般管理費。人件費・広告費・家賃など本業の間接費。費用の先送りや簿外化で利益操作に使われる。" },
-  { key: "nonOpInc",     label: "営業外収益",   stmt: "pl", tier: "detail", desc: "受取利息・配当金・為替差益など本業以外の収益。経常利益を底上げするために水増しされることがある。" },
-  { key: "nonOpExp",     label: "営業外費用",   stmt: "pl", tier: "detail", desc: "支払利息など本業以外の費用。隠したり過小計上して経常利益をよく見せる操作の対象。" },
-  { key: "extraInc",     label: "特別利益",     stmt: "pl", tier: "detail", desc: "固定資産売却益など一時的・臨時の利益。実体のない利益計上や、本業不振を覆い隠す目的で使われやすい。" },
-  { key: "extraLoss",    label: "特別損失",     stmt: "pl", tier: "detail", desc: "減損損失・災害損失など臨時の損失。計上を先送り・隠蔽して純利益を大きく見せる粉飾の対象。" },
-  { key: "tax",          label: "法人税等",     stmt: "pl", tier: "detail", desc: "利益に課される税金。過小計上すると当期純利益が不自然に膨らむ。税引前利益との比率（実効税率）が手がかり。" },
+  { key: "sales",        label: "売上高",       stmt: "pl", tier: "basic",  hint: "本業の総収入", desc: "本業で得た収益の総額。架空売上（実在しない取引の計上）の典型的ターゲット。膨らませると売掛金や利益にも波及する。" },
+  { key: "cogs",         label: "売上原価",     stmt: "pl", tier: "basic",  hint: "仕入・製造の直接費", desc: "売った商品・サービスにかかった直接費用。意図的に小さく見せる（在庫へ付け替える）と粗利が水増しされる。" },
+  { key: "sga",          label: "販管費",       stmt: "pl", tier: "basic",  hint: "人件費・広告・家賃など", desc: "販売費及び一般管理費。人件費・広告費・家賃など本業の間接費。費用の先送りや簿外化で利益操作に使われる。" },
+  { key: "nonOpInc",     label: "営業外収益",   stmt: "pl", tier: "detail", hint: "受取利息・配当など", desc: "受取利息・配当金・為替差益など本業以外の収益。経常利益を底上げするために水増しされることがある。" },
+  { key: "nonOpExp",     label: "営業外費用",   stmt: "pl", tier: "detail", hint: "支払利息など", desc: "支払利息など本業以外の費用。隠したり過小計上して経常利益をよく見せる操作の対象。" },
+  { key: "extraInc",     label: "特別利益",     stmt: "pl", tier: "detail", hint: "資産売却益など臨時", desc: "固定資産売却益など一時的・臨時の利益。実体のない利益計上や、本業不振を覆い隠す目的で使われやすい。" },
+  { key: "extraLoss",    label: "特別損失",     stmt: "pl", tier: "detail", hint: "減損・災害など臨時損", desc: "減損損失・災害損失など臨時の損失。計上を先送り・隠蔽して純利益を大きく見せる粉飾の対象。" },
+  { key: "tax",          label: "法人税等",     stmt: "pl", tier: "detail", hint: "利益にかかる税金", desc: "利益に課される税金。過小計上すると当期純利益が不自然に膨らむ。税引前利益との比率（実効税率）が手がかり。" },
 
   // ===== 貸借対照表 BS（資産） =====
-  { key: "cash",         label: "現金預金",     stmt: "bs", tier: "basic",  desc: "手元資金。最も操作しにくい科目。利益は出ているのに現金が乏しい場合、利益が架空である疑いが強まる。" },
-  { key: "receivables",  label: "売掛金",       stmt: "bs", tier: "basic",  desc: "未回収の販売代金。架空売上の受け皿。売上比で異常に膨らんでいれば回収されない（実在しない）売上の疑い。" },
-  { key: "inventory",    label: "棚卸資産",     stmt: "bs", tier: "basic",  desc: "在庫。原価を付け替えて隠す先。原価率が不自然に低く在庫が膨張していれば、費用の繰延べ（粉飾）の疑い。" },
-  { key: "fixedAssets",  label: "固定資産",     stmt: "bs", tier: "detail", desc: "建物・機械・土地など長期保有資産。減損を回避（簿価据え置き）して資産・利益を過大に見せる操作の対象。" },
+  { key: "cash",         label: "現金預金",     stmt: "bs", tier: "basic",  hint: "手元の資金", desc: "手元資金。最も操作しにくい科目。利益は出ているのに現金が乏しい場合、利益が架空である疑いが強まる。" },
+  { key: "receivables",  label: "売掛金",       stmt: "bs", tier: "basic",  hint: "未回収の売上代金", desc: "未回収の販売代金。架空売上の受け皿。売上比で異常に膨らんでいれば回収されない（実在しない）売上の疑い。" },
+  { key: "inventory",    label: "棚卸資産",     stmt: "bs", tier: "basic",  hint: "在庫", desc: "在庫。原価を付け替えて隠す先。原価率が不自然に低く在庫が膨張していれば、費用の繰延べ（粉飾）の疑い。" },
+  { key: "fixedAssets",  label: "固定資産",     stmt: "bs", tier: "detail", hint: "建物・機械・土地など", desc: "建物・機械・土地など長期保有資産。減損を回避（簿価据え置き）して資産・利益を過大に見せる操作の対象。" },
   // ===== BS（負債・純資産） =====
-  { key: "payables",     label: "買掛金",       stmt: "bs", tier: "detail", desc: "未払いの仕入代金。過小計上すると負債が軽く見え、財務健全性を装える。仕入・原価との整合が手がかり。" },
-  { key: "shortDebt",    label: "短期借入金",   stmt: "bs", tier: "detail", desc: "1年以内返済の借入。簿外債務として隠されることがある。利息（営業外費用）との対応が崩れていれば疑わしい。" },
-  { key: "longDebt",     label: "長期借入金",   stmt: "bs", tier: "detail", desc: "長期の借入。隠れ債務の温床。資産規模に比べ不自然に少なければ簿外化の疑い。" },
-  { key: "equity",       label: "純資産",       stmt: "bs", tier: "detail", desc: "資産から負債を引いた正味の持ち分。水増しした利益はここに積み上がる。資産＝負債＋純資産の均衡が崩れていないかが鍵。" },
+  { key: "payables",     label: "買掛金",       stmt: "bs", tier: "detail", hint: "未払いの仕入代金", desc: "未払いの仕入代金。過小計上すると負債が軽く見え、財務健全性を装える。仕入・原価との整合が手がかり。" },
+  { key: "shortDebt",    label: "短期借入金",   stmt: "bs", tier: "detail", hint: "1年内返済の借入", desc: "1年以内返済の借入。簿外債務として隠されることがある。利息（営業外費用）との対応が崩れていれば疑わしい。" },
+  { key: "longDebt",     label: "長期借入金",   stmt: "bs", tier: "detail", hint: "長期の借入", desc: "長期の借入。隠れ債務の温床。資産規模に比べ不自然に少なければ簿外化の疑い。" },
+  { key: "equity",       label: "純資産",       stmt: "bs", tier: "detail", hint: "資本金＋利益剰余金など", desc: "資産から負債を引いた正味の持ち分。水増しした利益はここに積み上がる。資産＝負債＋純資産の均衡が崩れていないかが鍵。" },
 ];
 const A_BY_KEY = Object.fromEntries(ACCOUNTS.map((a) => [a.key, a]));
 const PL_KEYS = ACCOUNTS.filter((a) => a.stmt === "pl").map((a) => a.key);
@@ -767,7 +767,7 @@ function App() {
 
   function resetBuild() {
     setCompanies([makeCompany("parent", 0, "manufacturing"), makeCompany("sub", 1, "retail")]);
-    setInternalTxns([]); setFakes([]); setIsClean(false); setPeriodCount(1); setCode("");
+    setInternalTxns([]); setFakes([]); setIsClean(false); setPeriodCount(1); setCode(""); setPreviewMode(false);
   }
   // 期数を変更（全社のperiods長を揃える）
   function changePeriodCount(n) {
@@ -788,6 +788,51 @@ function App() {
     // 期数が1になったら期別痕跡に依存する架空指定はそのまま（buildCodeで再検証）
   }
   const [buildWarn, setBuildWarn] = useState(null);
+  const [previewMode, setPreviewMode] = useState(false);
+
+  // ===== 下書き保存・プレビュー =====
+  const DRAFT_KEY = "fraudduel:draft:v1";
+  const [hasDraft, setHasDraft] = useState(false);
+  const [draftMsg, setDraftMsg] = useState("");
+  useEffect(() => { storage.get(DRAFT_KEY).then((r) => setHasDraft(!!(r && r.value))).catch(() => {}); }, []);
+  function buildDraftObj() {
+    return { companies, internalTxns, fakes, isClean, periodCount, savedAt: Date.now() };
+  }
+  async function saveDraft() {
+    try { await storage.set(DRAFT_KEY, JSON.stringify(buildDraftObj())); setHasDraft(true); setDraftMsg("下書きを保存しました ✓"); }
+    catch { setDraftMsg("保存に失敗しました"); }
+    setTimeout(() => setDraftMsg(""), 2200);
+  }
+  async function loadDraft() {
+    try {
+      const r = await storage.get(DRAFT_KEY);
+      if (!r || !r.value) { setDraftMsg("下書きがありません"); setTimeout(() => setDraftMsg(""), 2000); return; }
+      const d = JSON.parse(r.value);
+      if (d.companies) setCompanies(d.companies);
+      if (d.internalTxns) setInternalTxns(d.internalTxns);
+      if (d.fakes) setFakes(d.fakes);
+      if (typeof d.isClean === "boolean") setIsClean(d.isClean);
+      if (d.periodCount) setPeriodCount(d.periodCount);
+      setDraftMsg("下書きを読み込みました ✓");
+    } catch { setDraftMsg("読み込みに失敗しました"); }
+    setTimeout(() => setDraftMsg(""), 2200);
+  }
+  // プレビュー: 現在の入力を「答え合わせ無し」で調査官の見え方で確認
+  function previewChallenge() {
+    const fxFakes = isClean ? [] : companies.filter(fxAbusive).map((c) => c.cid);
+    const o = {
+      v: 5, periodCount, preview: true,
+      title: "プレビュー",
+      companies: companies.map((c) => ({ cid: c.cid, role: c.role, name: c.name, industry: c.industry, currency: c.currency, fxRate: c.fxRate, periods: c.periods, fin: curFin(c), hint: sanitizeText(c.hint || "", 120) })),
+      internalTxns: internalTxns.map((t) => ({ from: t.from, to: t.to, amount: t.amount })),
+      fakes: isClean ? [] : fakes, fxFakes, circular: false, clean: isClean,
+    };
+    o.companies = o.companies.map((c) => c.periods ? c : { ...c, periods: [c.fin || emptyFin()] });
+    setLoaded(o); setCurrentLid(null);
+    setAccusations([]); setAccuseCircular(false); setAccuseFx([]); setResult(null);
+    setPreviewMode(true);
+    setRoute("investigate");
+  }
 
   function buildCode() {
     // A: 痕跡のない架空指定をチェック（数字を不自然にしていない架空はNG）
@@ -957,7 +1002,8 @@ function App() {
           <Builder companies={companies} setCompanies={setCompanies} internalTxns={internalTxns} setInternalTxns={setInternalTxns}
             fakes={fakes} setFakes={setFakes} isClean={isClean} setIsClean={setIsClean} onDone={buildCode} onTip={setTip}
             periodCount={periodCount} changePeriodCount={changePeriodCount}
-            buildWarn={buildWarn} onForceBuild={() => { setBuildWarn(null); doBuildCode(); }} onDismissWarn={() => setBuildWarn(null)} />
+            buildWarn={buildWarn} onForceBuild={() => { setBuildWarn(null); doBuildCode(); }} onDismissWarn={() => setBuildWarn(null)}
+            onPreview={previewChallenge} onSaveDraft={saveDraft} onLoadDraft={loadDraft} hasDraft={hasDraft} draftMsg={draftMsg} />
         )}
         {route === "share" && <Share code={code} onBack={() => setRoute("build")} onHome={() => setRoute("home")} onMine={() => setRoute("mine")} user={user} cloudEnabled={cloud.enabled} onPublish={publishCurrent} onExplore={() => setRoute("explore")} onLogin={() => setRoute("login")} />}
         {route === "mine" && <MineList mine={mine} onBack={() => setRoute("home")} onShare={(e) => { setCode(e.code); setRoute("share"); }} onRemove={(mid) => deleteFromMine(mid).then(setMine)} />}
@@ -965,7 +1011,8 @@ function App() {
         {route === "load" && <Load onLoad={addCode} error={loadError} onBack={() => setRoute("library")} />}
         {route === "investigate" && loaded && (
           <Investigate data={loaded} accusations={accusations} setAccusations={setAccusations}
-            accuseCircular={accuseCircular} setAccuseCircular={setAccuseCircular} accuseFx={accuseFx} toggleFxAccuse={toggleFxAccuse} onSubmit={grade} onTip={setTip} />
+            accuseCircular={accuseCircular} setAccuseCircular={setAccuseCircular} accuseFx={accuseFx} toggleFxAccuse={toggleFxAccuse} onSubmit={grade} onTip={setTip}
+            previewMode={previewMode} onExitPreview={() => { setPreviewMode(false); setRoute("build"); }} />
         )}
         {route === "result" && result && <Result result={result} onHome={() => setRoute("home")} onLibrary={() => setRoute("library")} onTip={setTip} />}
 
@@ -1454,17 +1501,22 @@ function Home({ history, user, profile, onBuild, onLoad, onRules, onMine, onLogi
 function AccountRow({ a, value, onChange, faked, onToggleFake, showFake, sym, onTip, removable, onRemove }) {
   return (
     <div className={`fin-row ${faked ? "faked" : ""} ${removable ? "is-extra" : ""}`}>
-      <button className="fin-label tip-trigger" onClick={() => onTip({ label: a.label, desc: a.desc })} title="説明を見る">
-        {a.label}<span className="tip-mark">?</span>
-      </button>
-      <div className="fin-input-wrap">
-        <span className="fin-sym">{sym}</span>
-        <input className="fin-input" inputMode="numeric" value={value === 0 ? "" : value} placeholder="0" onChange={(e) => onChange(e.target.value)} />
+      <div className="fin-label-col">
+        <button className="fin-label tip-trigger" onClick={() => onTip({ label: a.label, desc: a.desc })} title="説明を見る">
+          {a.label}<span className="tip-mark">?</span>
+        </button>
+        {a.hint && <span className="fin-hint">{a.hint}</span>}
       </div>
-      {showFake && (
-        <button className={`fake-btn ${faked ? "on" : ""}`} onClick={onToggleFake}>{faked ? "架空 ✓" : "架空指定"}</button>
-      )}
-      {removable && <button className="row-remove" onClick={onRemove} title="この科目を外す">✕</button>}
+      <div className="fin-right">
+        <div className="fin-input-wrap">
+          <span className="fin-sym">{sym}</span>
+          <input className="fin-input" inputMode="numeric" value={value === 0 ? "" : value} placeholder="0" onChange={(e) => onChange(e.target.value)} />
+        </div>
+        {showFake && (
+          <button className={`fake-btn ${faked ? "on" : ""}`} onClick={onToggleFake} title="この数字を架空（粉飾）にする">{faked ? "🎭 架空中" : "架空にする"}</button>
+        )}
+        {removable && <button className="row-remove" onClick={onRemove} title="この科目を外す">✕</button>}
+      </div>
     </div>
   );
 }
@@ -1492,7 +1544,7 @@ function DerivedLine({ label, value, strong, sym }) {
 }
 
 // ================================================================
-function Builder({ companies, setCompanies, internalTxns, setInternalTxns, fakes, setFakes, isClean, setIsClean, onDone, onTip, periodCount, changePeriodCount, buildWarn, onForceBuild, onDismissWarn }) {
+function Builder({ companies, setCompanies, internalTxns, setInternalTxns, fakes, setFakes, isClean, setIsClean, onDone, onTip, periodCount, changePeriodCount, buildWarn, onForceBuild, onDismissWarn, onPreview, onSaveDraft, onLoadDraft, hasDraft, draftMsg }) {
   const [tab, setTab] = useState(companies[0]?.cid);
   const activeCid = companies.some((c) => c.cid === tab) ? tab : companies[0]?.cid;
   const active = companies.find((c) => c.cid === activeCid);
@@ -1831,7 +1883,13 @@ function Builder({ companies, setCompanies, internalTxns, setInternalTxns, fakes
 
       <div className="builder-actions">
         <button className="btn primary big" disabled={!anyInput} onClick={onDone}>出題コードを発行する →</button>
-        {!anyInput && <span className="muted small">数字を入力すると発行できます</span>}
+        <div className="builder-sub-actions">
+          <button className="btn ghost" disabled={!anyInput} onClick={onPreview}>👁 プレビュー（調査官の見え方）</button>
+          <button className="btn ghost" disabled={!anyInput} onClick={onSaveDraft}>💾 下書き保存</button>
+          {hasDraft && <button className="btn ghost" onClick={onLoadDraft}>📂 下書きを開く</button>}
+        </div>
+        {!anyInput && <span className="muted small">数字を入力すると発行・保存できます</span>}
+        {draftMsg && <span className="draft-msg">{draftMsg}</span>}
       </div>
     </div>
   );
@@ -2271,7 +2329,7 @@ function GroupDiagram({ companies, internalTxns }) {
   );
 }
 
-function Investigate({ data, accusations, setAccusations, accuseCircular, setAccuseCircular, accuseFx, toggleFxAccuse, onSubmit, onTip }) {
+function Investigate({ data, accusations, setAccusations, accuseCircular, setAccuseCircular, accuseFx, toggleFxAccuse, onSubmit, onTip, previewMode, onExitPreview }) {
   const companies = data.companies;
   const internalTxns = data.internalTxns || [];
   const [hintFor, setHintFor] = useState(null); // ヒント(推移グラフ)を開いている会社cid
@@ -2287,7 +2345,13 @@ function Investigate({ data, accusations, setAccusations, accuseCircular, setAcc
 
   return (
     <div className="screen">
-      <div className="section-head"><h2 className="h2">審査室</h2>
+      {previewMode && (
+        <div className="preview-banner">
+          👁 プレビュー中 — これは調査官に見える画面です。架空指定した数字に痕跡（⚑）が出ているか確認しましょう。採点はされません。
+          <button className="btn ghost small-btn" onClick={onExitPreview}>作成に戻る</button>
+        </div>
+      )}
+      <div className="section-head"><h2 className="h2">{previewMode ? "プレビュー（調査官の見え方）" : "審査室"}</h2>
         <p className="muted">各科目をタップで指摘。科目名の「?」で説明。業種基準の比率異常・税率の不自然さ・BSの貸借不均衡・為替・連結のズレが手がかり。健全なら何も告発しないのが正解。</p></div>
 
       <div className="invest-companies">
@@ -2411,7 +2475,9 @@ function Investigate({ data, accusations, setAccusations, accuseCircular, setAcc
 
       <div className="builder-actions">
         <div className="acc-count">指摘中：<b>{accusations.length}</b> 科目{accuseCircular ? " ＋循環" : ""}{accuseFx.length ? ` ＋為替${accuseFx.length}` : ""}</div>
-        <button className="btn primary big" onClick={onSubmit}>調査結果を確定する</button>
+        {previewMode
+          ? <button className="btn primary big" onClick={onExitPreview}>← 作成に戻る</button>
+          : <button className="btn primary big" onClick={onSubmit}>調査結果を確定する</button>}
         <span className="muted small">何も指摘せず確定すれば「適正意見（粉飾なし）」になります</span>
       </div>
     </div>

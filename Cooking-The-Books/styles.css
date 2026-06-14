@@ -107,12 +107,15 @@ html, body { max-width: 100%; overflow-x: hidden; }
 
 .stmt-block { margin-bottom: 18px; }
 .stmt-title { font-family: Georgia, 'Times New Roman', serif; font-size: 16px; color: #d9a441; margin-bottom: 10px; padding-bottom: 4px; border-bottom: 1px solid #2f3e4e; }
-.form-grid { display:grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.form-grid { display:grid; grid-template-columns: 1fr; gap: 8px; }
 .form-grid.one { grid-template-columns: 1fr; }
 @media (max-width: 640px){ .form-grid { grid-template-columns: 1fr; } }
-.fin-row { display:flex; align-items:center; gap: 8px; padding: 8px; border-radius: 7px; background: #202b38; border: 1px solid transparent; }
+.fin-row { display:flex; align-items:center; gap: 12px; padding: 10px 12px; border-radius: 8px; background: #202b38; border: 1px solid #2f3e4e; }
 .fin-row.faked { border-color: #e5563f; background: rgba(229,86,63,.1); }
-.fin-label { width: 92px; font-size: 13px; color: #8aa0b4; flex-shrink: 0; text-align: left; background: transparent; border: none; cursor: pointer; display:flex; align-items:center; gap: 3px; padding: 0; }
+.fin-label-col { width: 150px; flex-shrink: 0; display: flex; flex-direction: column; gap: 2px; }
+.fin-label { font-size: 14px; color: #e7eef5; text-align: left; background: transparent; border: none; cursor: pointer; display:flex; align-items:center; gap: 4px; padding: 0; font-weight: 600; }
+.fin-hint { font-size: 10.5px; color: #5a6f82; font-family: 'Courier New', monospace; }
+.fin-right { flex: 1; display: flex; align-items: center; gap: 8px; min-width: 0; }
 .fin-label:hover { color: #4cc6c0; }
 .tip-mark { display:inline-flex; align-items:center; justify-content:center; width: 14px; height: 14px; border-radius: 50%; border: 1px solid #5a6f82; font-size: 9px; color: #5a6f82; }
 .fin-label:hover .tip-mark { border-color: #4cc6c0; color: #4cc6c0; }
@@ -121,7 +124,7 @@ html, body { max-width: 100%; overflow-x: hidden; }
 .fin-sym { color: #5a6f82; font-family: 'Courier New', ui-monospace, monospace; font-size: 13px; }
 .fin-input { flex: 1; min-width: 0; background: transparent; border: none; color: #e7eef5; font-family: 'Courier New', ui-monospace, monospace; font-size: 15px; padding: 8px 10px 8px 4px; text-align: right; }
 .fin-input:focus { outline: none; }
-.fake-btn { font-family: 'Courier New', ui-monospace, monospace; font-size: 11px; padding: 6px 9px; border-radius: 5px; border: 1px solid #2f3e4e; background: transparent; color: #5a6f82; cursor: pointer; flex-shrink: 0; }
+.fake-btn { font-family: 'Courier New', ui-monospace, monospace; font-size: 11px; padding: 7px 11px; border-radius: 6px; border: 1px solid #e5563f; background: transparent; color: #e5563f; cursor: pointer; flex-shrink: 0; white-space: nowrap; }
 .fake-btn.on { background: #e5563f; color:#fff; border-color: #e5563f; }
 
 .derived-box { margin-top: 10px; padding: 10px 12px; background: #0f1419; border-radius: 7px; border: 1px solid #2f3e4e; }
@@ -541,3 +544,19 @@ html, body { max-width: 100%; overflow-x: hidden; }
 .coll-tabs { display: flex; gap: 6px; margin-bottom: 12px; flex-wrap: wrap; }
 .coll-tab { font-family: 'Courier New', monospace; font-size: 12.5px; padding: 8px 14px; border-radius: 18px; border: 1px solid #2f3e4e; background: #18202a; color: #8aa0b4; cursor: pointer; }
 .coll-tab.on { border-color: #d9a441; color: #d9a441; background: rgba(217,164,65,.1); }
+
+/* ===== 作成フォーム モバイル対応 ===== */
+@media (max-width: 560px) {
+  .fin-row { flex-direction: column; align-items: stretch; gap: 8px; }
+  .fin-label-col { width: 100%; flex-direction: row; align-items: baseline; gap: 8px; }
+  .fin-hint { font-size: 11px; }
+  .fin-right { width: 100%; }
+  .fin-input { font-size: 16px; } /* iOSズーム防止 */
+  .bs-cols { flex-direction: column; gap: 16px; }
+}
+
+/* ===== プレビュー・下書き ===== */
+.builder-sub-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; justify-content: center; }
+.draft-msg { display: block; text-align: center; margin-top: 8px; font-size: 12.5px; color: #5bbf7a; font-family: 'Courier New', monospace; }
+.preview-banner { background: rgba(217,164,65,.12); border: 1px solid #d9a441; border-radius: 8px; padding: 12px 14px; font-size: 13px; color: #e7eef5; line-height: 1.7; margin-bottom: 16px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.preview-banner .small-btn { margin-left: auto; }
