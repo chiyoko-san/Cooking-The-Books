@@ -67,7 +67,95 @@ const cloud = {
       return q.docs.map((d) => ({ uid: d.id, ...d.data() }));
     } catch (e) { console.warn("ranking failed", e); return []; }
   },
+
+  // ===== 公開出題（投稿） =====
+  REPORT_THRESHOLD: 3, // 通報がこの数に達すると自動非表示
+  async publishPost(uid, ownerName, meta, code) {
+    if (!FB.enabled || !uid) throw new Error("not-logged-in");
+    const doc = {
+      title: sanitizeText(meta.title || "出題", 60),
+      code, ownerUid: uid, ownerName: sanitizeText(ownerName || "匿名", 24),
+      companyCount: meta.companyCount || 0, hasFx: !!meta.hasFx, periodCount: meta.periodCount || 1, clean: !!meta.clean,
+      likeCount: 0, reportCount: 0, hidden: false, createdAt: Date.now(),
+    };
+    const ref = await FB.db.collection("posts").add(doc);
+    return ref.id;
+  },
+  async listPosts({ sort = "new", limit = 40 } = {}) {
+    if (!FB.enabled) return [];
+    try {
+      let q = FB.db.collection("posts").where("hidden", "==", false);
+      q = q.orderBy(sort === "popular" ? "likeCount" : "createdAt", "desc").limit(limit);
+      const snap = await q.get();
+      return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    } catch (e) { console.warn("listPosts failed", e); return []; }
+  },
+  async hasLiked(postId, uid) {
+    if (!FB.enabled || !uid) return false;
+    try { const d = await FB.db.collection("posts").doc(postId).collection("likes").doc(uid).get(); return d.exists; } catch { return false; }
+  },
+  async toggleLike(postId, uid) {
+    if (!FB.enabled || !uid) throw new Error("not-logged-in");
+    const postRef = FB.db.collection("posts").doc(postId);
+    const likeRef = postRef.collection("likes").doc(uid);
+    return FB.db.runTransaction(async (tx) => {
+      const likeSnap = await tx.get(likeRef);
+      const postSnap = await tx.get(postRef);
+      const cur = postSnap.exists ? (postSnap.data().likeCount || 0) : 0;
+      if (likeSnap.exists) { tx.delete(likeRef); tx.update(postRef, { likeCount: Math.max(0, cur - 1) }); return false; }
+      else { tx.set(likeRef, { at: Date.now() }); tx.update(postRef, { likeCount: cur + 1 }); return true; }
+    });
+  },
+  async reportPost(postId, uid, reason) {
+    if (!FB.enabled || !uid) throw new Error("not-logged-in");
+    const postRef = FB.db.collection("posts").doc(postId);
+    const repRef = postRef.collection("reports").doc(uid);
+    return FB.db.runTransaction(async (tx) => {
+      const repSnap = await tx.get(repRef);
+      if (repSnap.exists) return "already";
+      const postSnap = await tx.get(postRef);
+      const cur = postSnap.exists ? (postSnap.data().reportCount || 0) : 0;
+      const next = cur + 1;
+      tx.set(repRef, { at: Date.now(), reason: sanitizeText(reason || "", 200) });
+      const upd = { reportCount: next };
+      if (next >= cloud.REPORT_THRESHOLD) upd.hidden = true; // 自動非表示
+      tx.update(postRef, upd);
+      return "ok";
+    });
+  },
+  // ===== 管理者 =====
+  async isAdmin(uid) {
+    if (!FB.enabled || !uid) return false;
+    try { const d = await FB.db.collection("admins").doc(uid).get(); return d.exists; } catch { return false; }
+  },
+  async adminListReported(limit = 60) {
+    if (!FB.enabled) return [];
+    try {
+      const snap = await FB.db.collection("posts").orderBy("reportCount", "desc").limit(limit).get();
+      return snap.docs.map((d) => ({ id: d.id, ...d.data() })).filter((p) => (p.reportCount || 0) > 0 || p.hidden);
+    } catch (e) { console.warn("adminListReported failed", e); return []; }
+  },
+  async adminSetHidden(postId, hidden) {
+    if (!FB.enabled) return;
+    try { await FB.db.collection("posts").doc(postId).update({ hidden: !!hidden }); } catch (e) { console.warn(e); }
+  },
+  async adminDelete(postId) {
+    if (!FB.enabled) return;
+    try { await FB.db.collection("posts").doc(postId).delete(); } catch (e) { console.warn(e); }
+  },
+  async deleteOwnPost(postId, uid) {
+    if (!FB.enabled || !uid) return;
+    try { await FB.db.collection("posts").doc(postId).delete(); } catch (e) { console.warn(e); }
+  },
 };
+
+// 入力文字の無害化（HTMLタグ除去・長さ制限・制御文字除去）
+function sanitizeText(s, maxLen) {
+  let t = String(s == null ? "" : s);
+  t = t.replace(/[<>]/g, "").replace(/[\u0000-\u001F\u007F]/g, "").trim();
+  if (maxLen && t.length > maxLen) t = t.slice(0, maxLen);
+  return t;
+}
 
 // ブラウザ単体(GitHub Pages)で動かすためのストレージ＆共有リンク基盤
 // window.storage が無い環境では localStorage を使うシムを提供
@@ -78,7 +166,7 @@ const storage = (typeof window !== "undefined" && window.storage && typeof windo
 };
 // 共有リンク: 常にトップ（ベース）URL + #データ。サブページ(/build/等)からでも安定。
 function baseSiteUrl() {
-  let p = location.pathname.replace(/(build|library|rules)\/?$/, "");
+  let p = location.pathname.replace(/(build|library|rules|explore|admin)\/?$/, "");
   if (!p.endsWith("/")) p += "/";
   return location.origin + p;
 }
@@ -479,7 +567,7 @@ async function deleteFromMine(mid) { let list = await loadMine(); list = list.fi
 
 // ================================================================
 function App() {
-  const VALID_START = ["home", "build", "library", "rules"];
+  const VALID_START = ["home", "build", "library", "rules", "explore", "admin"];
   const startRoute = (typeof window !== "undefined" && VALID_START.includes(window.__START_ROUTE__)) ? window.__START_ROUTE__ : "home";
   const [route, setRoute] = useState(startRoute);
   const [companies, setCompanies] = useState([makeCompany("parent", 0, "manufacturing"), makeCompany("sub", 1, "retail")]);
@@ -503,6 +591,7 @@ function App() {
   const [tip, setTip] = useState(null); // 科目説明ポップアップ {label, desc}
   const [user, setUser] = useState(null);       // Firebaseログインユーザー
   const [profile, setProfile] = useState(null); // {displayName}
+  const [isAdmin, setIsAdmin] = useState(false); // 管理者か
 
   useEffect(() => { loadHistory().then(setHistory); loadLibrary().then(setLibrary); loadMine().then(setMine); }, []);
 
@@ -510,8 +599,10 @@ function App() {
   useEffect(() => {
     const unsub = cloud.onAuth(async (u) => {
       setUser(u || null);
-      if (u) { const p = await cloud.getProfile(u.uid); setProfile(p || { displayName: u.displayName || (u.email ? u.email.split("@")[0] : "匿名") }); }
-      else setProfile(null);
+      if (u) {
+        const p = await cloud.getProfile(u.uid); setProfile(p || { displayName: u.displayName || (u.email ? u.email.split("@")[0] : "匿名") });
+        setIsAdmin(await cloud.isAdmin(u.uid));
+      } else { setProfile(null); setIsAdmin(false); }
     });
     return () => unsub && unsub();
   }, []);
@@ -523,12 +614,12 @@ function App() {
   const BASE_PATH = (() => {
     // 例: /Cooking-the-Books/ または /Cooking-the-Books/build/ から末尾ページ名を除いたベースを得る
     let p = window.location.pathname;
-    p = p.replace(/(build|library|rules)\/?$/, ""); // 既知のサブページ名を除去
+    p = p.replace(/(build|library|rules|explore|admin)\/?$/, ""); // 既知のサブページ名を除去
     if (!p.endsWith("/")) p += "/";
     return p;
   })();
   const pathForRoute = (r) => {
-    if (r === "build" || r === "library" || r === "rules") return BASE_PATH + r + "/";
+    if (["build", "library", "rules", "explore", "admin"].includes(r)) return BASE_PATH + r + "/";
     return BASE_PATH; // home とその他（投稿審査など）はトップのURL
   };
   useEffect(() => {
@@ -647,6 +738,23 @@ function App() {
   async function removeChallenge(lid) { const list = await deleteFromLibrary(lid); setLibrary(list); }
   function toggleFxAccuse(cid) { setAccuseFx((p) => p.includes(cid) ? p.filter((x) => x !== cid) : [...p, cid]); }
 
+  // 公開出題（投稿）を遊ぶ
+  function playPost(post) {
+    const o = dec(post.code);
+    if (!o || !o.companies) { return; }
+    o.companies = o.companies.map((c) => c.periods ? c : { ...c, periods: [c.fin || emptyFin()] });
+    setLoaded(o); setCurrentLid(null);
+    setAccusations([]); setAccuseCircular(false); setAccuseFx([]); setResult(null);
+    setRoute("investigate");
+  }
+  // 出題を公開board に投稿
+  async function publishCurrent() {
+    if (!user) { setRoute("login"); return; }
+    const meta = { title: (dec(code) || {}).title || "出題", companyCount: (dec(code) || {}).companies?.length || 0, hasFx: false, periodCount: (dec(code) || {}).periodCount || 1, clean: !!(dec(code) || {}).clean };
+    try { await cloud.publishPost(user.uid, profile && profile.displayName, meta, code); return true; }
+    catch (e) { return false; }
+  }
+
   async function grade() {
     const o = loaded;
     const trueFakes = o.fakes || [], trueFx = o.fxFakes || [], trueCircular = !!o.circular, cleanCo = !!o.clean;
@@ -712,13 +820,17 @@ function App() {
           <nav className="topnav">
             <button className={`nav-link ${route === "home" ? "active" : ""}`} onClick={() => setRoute("home")}>トップ</button>
             <button className={`nav-link ${route === "build" ? "active" : ""}`} onClick={() => { resetBuild(); setRoute("build"); }}>作成</button>
+            <button className={`nav-link ${route === "explore" ? "active" : ""}`} onClick={() => setRoute("explore")}>公開出題</button>
             <button className={`nav-link ${route === "library" ? "active" : ""}`} onClick={() => { setLoadError(""); setRoute("library"); }}>調査一覧</button>
             <button className={`nav-link ${route === "rules" ? "active" : ""}`} onClick={() => setRoute("rules")}>あそびかた</button>
+            {isAdmin && <button className={`nav-link admin ${route === "admin" ? "active" : ""}`} onClick={() => setRoute("admin")}>管理</button>}
           </nav>
         </header>
 
         {route === "home" && <Home history={history} user={user} profile={profile} onBuild={() => { resetBuild(); setRoute("build"); }} onLoad={() => { setLoadError(""); setRoute("library"); }} onRules={() => setRoute("rules")} onMine={() => setRoute("mine")} onLogin={() => setRoute("login")} onMypage={() => setRoute("mypage")} />}
         {route === "login" && <Login onBack={() => setRoute("home")} onDone={() => setRoute("mypage")} />}
+        {route === "explore" && <Explore user={user} onPlay={playPost} onBack={() => setRoute("home")} onLogin={() => setRoute("login")} />}
+        {route === "admin" && <AdminPanel isAdmin={isAdmin} onBack={() => setRoute("home")} />}
         {route === "mypage" && <MyPage user={user} profile={profile} history={history} onBack={() => setRoute("home")} onLogin={() => setRoute("login")} onProfileSaved={setProfile} />}
         {route === "rules" && <Rules onBack={() => setRoute("home")} onTip={setTip} />}
         {route === "build" && (
@@ -727,7 +839,7 @@ function App() {
             periodCount={periodCount} changePeriodCount={changePeriodCount}
             buildWarn={buildWarn} onForceBuild={() => { setBuildWarn(null); doBuildCode(); }} onDismissWarn={() => setBuildWarn(null)} />
         )}
-        {route === "share" && <Share code={code} onBack={() => setRoute("build")} onHome={() => setRoute("home")} onMine={() => setRoute("mine")} />}
+        {route === "share" && <Share code={code} onBack={() => setRoute("build")} onHome={() => setRoute("home")} onMine={() => setRoute("mine")} user={user} cloudEnabled={cloud.enabled} onPublish={publishCurrent} onExplore={() => setRoute("explore")} onLogin={() => setRoute("login")} />}
         {route === "mine" && <MineList mine={mine} onBack={() => setRoute("home")} onShare={(e) => { setCode(e.code); setRoute("share"); }} onRemove={(mid) => deleteFromMine(mid).then(setMine)} />}
         {route === "library" && <Library library={library} onStart={startChallenge} onAdd={() => { setLoadError(""); setRoute("load"); }} onRemove={removeChallenge} onBack={() => setRoute("home")} />}
         {route === "load" && <Load onLoad={addCode} error={loadError} onBack={() => setRoute("library")} />}
@@ -1566,17 +1678,166 @@ function Builder({ companies, setCompanies, internalTxns, setInternalTxns, fakes
 }
 
 // ================================================================
-function Share({ code, onBack, onHome, onMine }) {
+// ===== 公開出題板 =====
+function Explore({ user, onPlay, onBack, onLogin }) {
+  const [posts, setPosts] = useState([]);
+  const [sort, setSort] = useState("new");
+  const [loading, setLoading] = useState(true);
+  const [liked, setLiked] = useState({});      // postId -> bool
+  const [busy, setBusy] = useState({});         // postId -> bool（連打防止）
+  const [reportFor, setReportFor] = useState(null); // 通報対象post
+  const [msg, setMsg] = useState("");
+
+  async function load() {
+    setLoading(true);
+    const list = await cloud.listPosts({ sort, limit: 40 });
+    setPosts(list);
+    if (user) {
+      const lk = {};
+      for (const p of list) lk[p.id] = await cloud.hasLiked(p.id, user.uid);
+      setLiked(lk);
+    }
+    setLoading(false);
+  }
+  useEffect(() => { load(); }, [sort, user]);
+
+  async function like(p) {
+    if (!user) { onLogin(); return; }
+    if (busy[p.id]) return;
+    setBusy((b) => ({ ...b, [p.id]: true }));
+    try {
+      const nowLiked = await cloud.toggleLike(p.id, user.uid);
+      setLiked((l) => ({ ...l, [p.id]: nowLiked }));
+      setPosts((ps) => ps.map((x) => x.id === p.id ? { ...x, likeCount: (x.likeCount || 0) + (nowLiked ? 1 : -1) } : x));
+    } catch {}
+    setBusy((b) => ({ ...b, [p.id]: false }));
+  }
+  async function submitReport(reason) {
+    if (!user) { onLogin(); return; }
+    const p = reportFor; setReportFor(null);
+    const res = await cloud.reportPost(p.id, user.uid, reason);
+    setMsg(res === "already" ? "すでに通報済みです。" : "通報を受け付けました。ご協力ありがとうございます。");
+    setTimeout(() => setMsg(""), 2600);
+    load();
+  }
+
+  if (!cloud.enabled) {
+    return (<div className="screen"><div className="section-head"><h2 className="h2">公開出題</h2></div>
+      <div className="lib-empty">公開機能はログイン設定（Firebase）が必要です。</div>
+      <div className="btn-row"><button className="btn ghost" onClick={onBack}>トップへ</button></div></div>);
+  }
+  return (
+    <div className="screen">
+      <div className="section-head"><h2 className="h2">公開出題</h2><p className="muted">みんなが投稿した出題に挑戦できます。良い出題には♡を、不適切なものは通報を。</p></div>
+      {msg && <div className="toast">{msg}</div>}
+      <div className="lib-controls">
+        <div className="lib-ctrl-group"><span className="lib-ctrl-label">並び</span>
+          <div className="lib-chips">
+            <button className={`lib-chip ${sort === "new" ? "on" : ""}`} onClick={() => setSort("new")}>新着</button>
+            <button className={`lib-chip ${sort === "popular" ? "on" : ""}`} onClick={() => setSort("popular")}>人気（♡順）</button>
+          </div>
+        </div>
+      </div>
+      {loading ? <div className="muted small">読み込み中…</div> : posts.length === 0 ? (
+        <div className="lib-empty">まだ公開出題がありません。「作成」から出題を作って公開してみましょう。</div>
+      ) : (
+        <div className="lib-list">
+          {posts.map((p) => (
+            <div className="post-card" key={p.id}>
+              <div className="post-main" onClick={() => onPlay(p)}>
+                <div className="post-info">
+                  <div className="lib-title">{p.title}{p.clean && <span className="post-clean">健全かも</span>}{p.periodCount > 1 && <span className="lib-period">{p.periodCount}期</span>}</div>
+                  <div className="lib-meta"><span>作: {p.ownerName || "匿名"}</span><span className="lib-dot">·</span><span>{p.companyCount}社</span><span className="lib-dot">·</span><span>{new Date(p.createdAt).toLocaleDateString("ja-JP")}</span></div>
+                </div>
+                <div className="post-play">挑む →</div>
+              </div>
+              <div className="post-actions">
+                <button className={`like-btn ${liked[p.id] ? "on" : ""}`} onClick={() => like(p)} disabled={busy[p.id]}>{liked[p.id] ? "♥" : "♡"} {p.likeCount || 0}</button>
+                <button className="report-btn" onClick={() => user ? setReportFor(p) : onLogin()} title="通報">⚑ 通報</button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+      <div className="btn-row"><button className="btn ghost" onClick={onBack}>トップへ</button></div>
+
+      {reportFor && (
+        <div className="tip-overlay" onClick={() => setReportFor(null)}>
+          <div className="tip-card" onClick={(e) => e.stopPropagation()}>
+            <div className="tip-head"><span className="tip-label">通報する</span><button className="tip-x" onClick={() => setReportFor(null)}>✕</button></div>
+            <p className="muted small" style={{ marginBottom: 10 }}>「{reportFor.title}」を通報します。理由を選んでください。一定数の通報で自動的に非表示になります。</p>
+            <div className="report-reasons">
+              {["不適切な表現・誹謗中傷", "スパム・宣伝", "ゲームと無関係", "その他"].map((r) => (
+                <button key={r} className="btn ghost report-reason" onClick={() => submitReport(r)}>{r}</button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ===== 管理画面 =====
+function AdminPanel({ isAdmin, onBack }) {
+  const [posts, setPosts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  async function load() { setLoading(true); setPosts(await cloud.adminListReported(80)); setLoading(false); }
+  useEffect(() => { if (isAdmin) load(); }, [isAdmin]);
+
+  if (!cloud.enabled || !isAdmin) {
+    return (<div className="screen"><div className="section-head"><h2 className="h2">管理画面</h2></div>
+      <div className="lib-empty">この画面は管理者のみ利用できます。</div>
+      <div className="btn-row"><button className="btn ghost" onClick={onBack}>トップへ</button></div></div>);
+  }
+  async function setHidden(p, hidden) { await cloud.adminSetHidden(p.id, hidden); load(); }
+  async function del(p) { if (window.confirm(`「${p.title}」を完全に削除します。よろしいですか？`)) { await cloud.adminDelete(p.id); load(); } }
+
+  return (
+    <div className="screen">
+      <div className="section-head"><h2 className="h2">管理画面</h2><p className="muted">通報のあった出題の一覧です。非表示／表示の切り替え、削除ができます。</p></div>
+      {loading ? <div className="muted small">読み込み中…</div> : posts.length === 0 ? (
+        <div className="lib-empty">通報・非表示の出題はありません。秩序は保たれています。</div>
+      ) : (
+        <div className="lib-list">
+          {posts.map((p) => (
+            <div className={`admin-card ${p.hidden ? "hidden-post" : ""}`} key={p.id}>
+              <div className="admin-info">
+                <div className="lib-title">{p.title} {p.hidden && <span className="post-hidden-tag">非表示中</span>}</div>
+                <div className="lib-meta"><span>作: {p.ownerName || "匿名"}</span><span className="lib-dot">·</span><span className="report-count">通報 {p.reportCount || 0}</span><span className="lib-dot">·</span><span>♡ {p.likeCount || 0}</span></div>
+              </div>
+              <div className="admin-actions">
+                {p.hidden
+                  ? <button className="btn ghost small-btn" onClick={() => setHidden(p, false)}>表示に戻す</button>
+                  : <button className="btn ghost small-btn" onClick={() => setHidden(p, true)}>非表示にする</button>}
+                <button className="btn ghost small-btn danger-text" onClick={() => del(p)}>削除</button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+      <div className="btn-row"><button className="btn ghost" onClick={onBack}>トップへ</button></div>
+    </div>
+  );
+}
+
+function Share({ code, onBack, onHome, onMine, user, cloudEnabled, onPublish, onExplore, onLogin }) {
   const [copiedCode, setCopiedCode] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
+  const [pubState, setPubState] = useState("idle"); // idle|busy|done|error
   const ref = useRef(null);
   const link = makeShareLink(code);
   const isHosted = location.protocol.startsWith("http"); // file:// だとリンクは機能しない
   function copyCode() { navigator.clipboard?.writeText(code).catch(() => {}); if (ref.current) { ref.current.select(); try { document.execCommand("copy"); } catch {} } setCopiedCode(true); setTimeout(() => setCopiedCode(false), 1800); }
   function copyLink() { navigator.clipboard?.writeText(link).catch(() => {}); setCopiedLink(true); setTimeout(() => setCopiedLink(false), 1800); }
+  async function publish() {
+    setPubState("busy");
+    const ok = await onPublish();
+    setPubState(ok ? "done" : "error");
+  }
   return (
     <div className="screen">
-      <div className="section-head"><h2 className="h2">出題ができました</h2><p className="muted">対戦相手（調査官）に送ってください。リンクなら開くだけで審査が始まります。</p></div>
+      <div className="section-head"><h2 className="h2">出題ができました</h2><p className="muted">対戦相手に送る、または公開出題に投稿して誰でも遊べるようにできます。</p></div>
 
       {isHosted ? (
         <div className="share-block">
@@ -1593,6 +1854,26 @@ function Share({ code, onBack, onHome, onMine }) {
         <div className="code-box"><textarea ref={ref} readOnly value={code} className="code-text" onFocus={(e) => e.target.select()} /></div>
         <button className="btn ghost" onClick={copyCode}>{copiedCode ? "コピーしました ✓" : "コードをコピー"}</button>
       </div>
+
+      {cloudEnabled && (
+        <div className="share-block publish-block">
+          <div className="share-label">🌐 公開出題に投稿（みんなが遊べる）</div>
+          {pubState === "done" ? (
+            <div className="pub-done">公開しました！ <button className="btn ghost small-btn" onClick={onExplore}>公開出題を見る</button></div>
+          ) : !user ? (
+            <>
+              <p className="muted small">公開投稿にはログインが必要です。</p>
+              <button className="btn ghost" onClick={onLogin}>ログインして公開</button>
+            </>
+          ) : (
+            <>
+              <p className="muted small">あなたの名前で公開され、誰でも一覧から挑戦できます。不適切な内容は通報・削除の対象です。</p>
+              <button className="btn primary" onClick={publish} disabled={pubState === "busy"}>{pubState === "busy" ? "公開中…" : "この出題を公開する"}</button>
+              {pubState === "error" && <div className="error-msg">公開に失敗しました。時間をおいて再度お試しください。</div>}
+            </>
+          )}
+        </div>
+      )}
 
       <div className="btn-row">
         <button className="btn ghost" onClick={onMine}>マイ出題一覧</button>
