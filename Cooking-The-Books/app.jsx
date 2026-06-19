@@ -1000,7 +1000,7 @@ function App() {
     const payload = {
       v: 5,
       periodCount,
-      title: (multi ? `📅${periodCount}期 ` : "") + companies.map((c) => INDUSTRIES[c.industry].icon).join("") + " " + companies.length + "社",
+      title: (multi ? `${periodCount}期 ` : "") + companies.map((c) => INDUSTRIES[c.industry].icon).join("") + " " + companies.length + "社",
       companies: companies.map((c) => ({ cid: c.cid, role: c.role, name: sanitizeText(c.name || "会社", 30), industry: c.industry, currency: c.currency, fxRate: c.fxRate, periods: c.periods, fin: curFin(c), hint: sanitizeText(c.hint || "", 120) })),
       internalTxns: internalTxns.map((t) => ({ from: t.from, to: t.to, amount: t.amount })), fakes: isClean ? [] : fakes, fxFakes,
       circular: isClean ? false : internalTxns.some((t) => t.amount > (t.real || 0)),
@@ -1056,7 +1056,7 @@ function App() {
     const lv = pool[seed % pool.length];
     setLastLevel(lv);
     const o = makePracticeChallenge(lv);
-    o.title = "🗓 今日の1問";
+    o.title = "今日の1問";
     o.companies = o.companies.map((c) => c.periods ? c : { ...c, periods: [c.fin || emptyFin()] });
     setLoaded(o); setCurrentLid(null);
     setAccusations([]); setAccuseCircular(false); setAccuseFx([]); setResult(null); setPreviewMode(false);
@@ -1136,7 +1136,7 @@ function App() {
             <div className="top-right">
               {cloud.enabled && (
                 user
-                  ? <button className="acct-chip" onClick={() => setRoute("mypage")}>👤 {(profile && profile.displayName) || "マイページ"}</button>
+                  ? <button className="acct-chip" onClick={() => setRoute("mypage")}>{(profile && profile.displayName) || "マイページ"}</button>
                   : <button className="acct-chip login" onClick={() => setRoute("login")}>ログイン</button>
               )}
             </div>
@@ -1530,13 +1530,13 @@ function MyPage({ user, profile, history, onBack, onLogin, onProfileSaved, onPla
 
       <div className="collection-section">
         <div className="coll-tabs">
-          <button className={`coll-tab ${tab === "liked" ? "on" : ""}`} onClick={() => setTab("liked")}>♥ いいねした出題 ({likedList.length})</button>
-          <button className={`coll-tab ${tab === "saved" ? "on" : ""}`} onClick={() => setTab("saved")}>🔖 保存した出題 ({savedList.length})</button>
+          <button className={`coll-tab ${tab === "liked" ? "on" : ""}`} onClick={() => setTab("liked")}>いいねした出題 ({likedList.length})</button>
+          <button className={`coll-tab ${tab === "saved" ? "on" : ""}`} onClick={() => setTab("saved")}>保存した出題 ({savedList.length})</button>
         </div>
         {(() => {
           const list = tab === "liked" ? likedList : savedList;
           if (loading) return <div className="muted small">読み込み中…</div>;
-          if (list.length === 0) return <div className="lib-empty">{tab === "liked" ? "まだ「いいね」した出題はありません。公開出題で♡を押すと、ここに集まります。" : "まだ保存した出題はありません。公開出題で🔖を押すと、ここに集まります。"}</div>;
+          if (list.length === 0) return <div className="lib-empty">{tab === "liked" ? "まだ「いいね」した出題はありません。公開出題でを押すと、ここに集まります。" : "まだ保存した出題はありません。公開出題でを押すと、ここに集まります。"}</div>;
           return (
             <div className="lib-list">
               {list.map((e) => (
@@ -1556,7 +1556,7 @@ function MyPage({ user, profile, history, onBack, onLogin, onProfileSaved, onPla
       </div>
 
       <div className="rank-section">
-        <h3 className="rank-title">🏆 勝利数ランキング</h3>
+        <h3 className="rank-title">勝利数ランキング</h3>
         {loading ? <div className="muted small">読み込み中…</div> : ranking.length === 0 ? (
           <div className="muted small">まだランキングデータがありません。挑戦すると反映されます。</div>
         ) : (
@@ -1612,39 +1612,37 @@ function Home({ history, user, profile, onBuild, onLoad, onRules, onMine, onLogi
 
       {/* まずここから（初心者の入口を1本に） */}
       <div className="start-here">
-        <div className="start-label">{isNew ? "▼ まずはここから" : "▼ 今日も1問どうぞ"}</div>
+        <div className="start-label">{isNew ? "まずはここから" : "今日も1問どうぞ"}</div>
         <div className="start-cards">
           <button className="start-card primary" onClick={onPractice}>
-            <div className="sc-emoji">🎯</div>
             <div className="sc-title">練習モードで遊ぶ</div>
             <div className="sc-desc">レベル1から1つずつ。これが一番やさしい入口です。</div>
           </button>
           <button className="start-card" onClick={onDaily}>
-            <div className="sc-emoji">🗓</div>
             <div className="sc-title">今日の1問</div>
             <div className="sc-desc">毎日変わる1問。みんな同じ問題に挑戦。</div>
           </button>
         </div>
-        <button className="rules-link" onClick={onRules}>📖 ルールと例題を読む（初めての方へ）</button>
+        <button className="rules-link" onClick={onRules}>ルールと例題を読む（初めての方へ）</button>
       </div>
 
       <div className="role-divider"><span>もっと遊ぶ</span></div>
 
       <div className="role-grid">
         <button className="role-card invest" onClick={onExplore}>
-          <div className="role-icon">🌐</div><div className="role-name">公開出題に挑む</div>
+<div className="role-name">公開出題に挑む</div>
           <div className="role-desc">みんなが作った出題に挑戦。いいね・保存もできます。</div>
           <div className="role-go">公開出題へ →</div>
         </button>
         <button className="role-card fraud" onClick={onBuild}>
-          <div className="role-icon">✎</div><div className="role-name">出題を作る</div>
+<div className="role-name">出題を作る</div>
           <div className="role-desc">自分で決算書を作り、ウソを仕込んで出題。リンクで送る・公開する。</div>
           <div className="role-go">作る →</div>
         </button>
       </div>
       <div className="mine-link-row">
-        <button className="mine-link" onClick={onMine}>🗂 マイ出題一覧（作った出題を再送信）</button>
-        {cloud.enabled && <button className="mine-link" onClick={user ? onMypage : onLogin}>🏆 {user ? "マイページ・ランキング" : "ログインして成績を記録"}</button>}
+        <button className="mine-link" onClick={onMine}>マイ出題一覧（作った出題を再送信）</button>
+        {cloud.enabled && <button className="mine-link" onClick={user ? onMypage : onLogin}>{user ? "マイページ・ランキング" : "ログインして成績を記録"}</button>}
       </div>
       <div className="hist-section">
         <div className="hist-head">
@@ -1694,7 +1692,7 @@ function AccountRow({ a, value, onChange, faked, onToggleFake, showFake, sym, on
           <input className="fin-input" inputMode="numeric" value={value === 0 ? "" : value} placeholder="0" onChange={(e) => onChange(e.target.value)} />
         </div>
         {showFake && (
-          <button className={`fake-btn ${faked ? "on" : ""}`} onClick={onToggleFake} title="この数字を架空（粉飾）にする">{faked ? "🎭 架空中" : "架空にする"}</button>
+          <button className={`fake-btn ${faked ? "on" : ""}`} onClick={onToggleFake} title="この数字を架空（粉飾）にする">{faked ? "架空中" : "架空にする"}</button>
         )}
         {removable && <button className="row-remove" onClick={onRemove} title="この科目を外す">✕</button>}
       </div>
@@ -1847,7 +1845,7 @@ function Builder({ companies, setCompanies, internalTxns, setInternalTxns, fakes
 
       <div className="period-panel">
         <div className="period-head">
-          <span className="period-title">📅 期数</span>
+          <span className="period-title">期数</span>
           <span className="period-sub">{nPeriods === 1 ? "単期（やさしい）" : `${nPeriods}期比較（むずかしい）`}</span>
         </div>
         <div className="period-opts">
@@ -1861,7 +1859,7 @@ function Builder({ companies, setCompanies, internalTxns, setInternalTxns, fakes
       </div>
 
       <div className="auto-panel">
-        <div className="auto-title">⚡ 自動入力（初心者向け）</div>
+        <div className="auto-title">自動入力（初心者向け）</div>
         <div className="auto-btns">
           <button className="auto-btn green" onClick={autoHealthyAll}>全社・健全データ生成</button>
           <button className="auto-btn red" onClick={autoFraudAll}>全社・粉飾データ生成<span className="auto-sub">架空＋為替操作 自動</span></button>
@@ -1924,7 +1922,7 @@ function Builder({ companies, setCompanies, internalTxns, setInternalTxns, fakes
           <p className="ind-note">{INDUSTRIES[active.industry].note}<button className="inline-auto" onClick={() => autoHealthyOne(active.cid)}>この社だけ自動生成</button></p>
 
           <div className="hint-row">
-            <span className="hint-label">💡 この会社へのヒント（任意・調査官に表示されます）</span>
+            <span className="hint-label">この会社へのヒント（任意・調査官に表示されます）</span>
             <textarea className="hint-input" maxLength={120} rows={2} placeholder="例: この会社、売上の伸びがちょっと不自然かも…？（最大120字）"
               value={active.hint || ""} onChange={(e) => setField(active.cid, "hint", e.target.value)} />
             <span className="hint-count">{(active.hint || "").length}/120</span>
@@ -2065,9 +2063,9 @@ function Builder({ companies, setCompanies, internalTxns, setInternalTxns, fakes
       <div className="builder-actions">
         <button className="btn primary big" disabled={!anyInput} onClick={onDone}>出題コードを発行する →</button>
         <div className="builder-sub-actions">
-          <button className="btn ghost" disabled={!anyInput} onClick={onPreview}>👁 プレビュー（調査官の見え方）</button>
-          <button className="btn ghost" disabled={!anyInput} onClick={onSaveDraft}>💾 下書き保存</button>
-          {hasDraft && <button className="btn ghost" onClick={onLoadDraft}>📂 下書きを開く</button>}
+          <button className="btn ghost" disabled={!anyInput} onClick={onPreview}>プレビュー（調査官の見え方）</button>
+          <button className="btn ghost" disabled={!anyInput} onClick={onSaveDraft}>下書き保存</button>
+          {hasDraft && <button className="btn ghost" onClick={onLoadDraft}>下書きを開く</button>}
         </div>
         {!anyInput && <span className="muted small">数字を入力すると発行・保存できます</span>}
         {draftMsg && <span className="draft-msg">{draftMsg}</span>}
@@ -2096,7 +2094,7 @@ function Practice({ onStart, onBack }) {
           </button>
         ))}
       </div>
-      <div className="practice-note">💡 練習はランキングに影響しません。何度でも挑戦OK。<b>超級</b>はキャッシュフロー計算書つきの本格問題です。慣れたら「作成」で自作したり「公開出題」でみんなの問題に挑みましょう。</div>
+      <div className="practice-note">練習はランキングに影響しません。何度でも挑戦OK。<b>超級</b>はキャッシュフロー計算書つきの本格問題です。慣れたら「作成」で自作したり「公開出題」でみんなの問題に挑みましょう。</div>
       <div className="btn-row"><button className="btn ghost" onClick={onBack}>トップへ</button></div>
     </div>
   );
@@ -2163,26 +2161,26 @@ function Explore({ user, onPlay, onBack, onLogin }) {
   }
   return (
     <div className="screen">
-      <div className="section-head"><h2 className="h2">公開出題</h2><p className="muted">みんなが投稿した出題に挑戦できます。良い出題には♡を、不適切なものは通報を。</p></div>
+      <div className="section-head"><h2 className="h2">公開出題</h2><p className="muted">みんなが投稿した出題に挑戦できます。良い出題にはを、不適切なものは通報を。</p></div>
       {msg && <div className="toast">{msg}</div>}
       <div className="lib-controls">
         <div className="lib-ctrl-group"><span className="lib-ctrl-label">並び</span>
           <div className="lib-chips">
             <button className={`lib-chip ${sort === "new" ? "on" : ""}`} onClick={() => setSort("new")}>新着</button>
-            <button className={`lib-chip ${sort === "popular" ? "on" : ""}`} onClick={() => setSort("popular")}>人気（♡順）</button>
+            <button className={`lib-chip ${sort === "popular" ? "on" : ""}`} onClick={() => setSort("popular")}>人気（順）</button>
           </div>
         </div>
         {user && <div className="lib-ctrl-group"><span className="lib-ctrl-label">表示</span>
           <div className="lib-chips">
             <button className={`lib-chip ${!onlySaved ? "on" : ""}`} onClick={() => setOnlySaved(false)}>すべて</button>
-            <button className={`lib-chip ${onlySaved ? "on" : ""}`} onClick={() => setOnlySaved(true)}>🔖 保存したもの</button>
+            <button className={`lib-chip ${onlySaved ? "on" : ""}`} onClick={() => setOnlySaved(true)}>保存したもの</button>
           </div>
         </div>}
       </div>
       {(() => {
         const shown = onlySaved ? posts.filter((p) => saved[p.id]) : posts;
         if (loading) return <div className="muted small">読み込み中…</div>;
-        if (shown.length === 0) return <div className="lib-empty">{onlySaved ? "保存した出題はまだありません。🔖で保存できます。" : "まだ公開出題がありません。「作成」から出題を作って公開してみましょう。"}</div>;
+        if (shown.length === 0) return <div className="lib-empty">{onlySaved ? "保存した出題はまだありません。で保存できます。" : "まだ公開出題がありません。「作成」から出題を作って公開してみましょう。"}</div>;
         return (
         <div className="lib-list">
           {shown.map((p) => (
@@ -2195,8 +2193,8 @@ function Explore({ user, onPlay, onBack, onLogin }) {
                 <div className="post-play">挑む →</div>
               </div>
               <div className="post-actions">
-                <button className={`like-btn ${liked[p.id] ? "on" : ""}`} onClick={() => like(p)} disabled={busy[p.id]}>{liked[p.id] ? "♥" : "♡"} {p.likeCount || 0}</button>
-                <button className={`save-btn ${saved[p.id] ? "on" : ""}`} onClick={() => save(p)} title="保存">{saved[p.id] ? "🔖 保存済" : "🔖 保存"}</button>
+                <button className={`like-btn ${liked[p.id] ? "on" : ""}`} onClick={() => like(p)} disabled={busy[p.id]}>{liked[p.id] ? "" : ""} {p.likeCount || 0}</button>
+                <button className={`save-btn ${saved[p.id] ? "on" : ""}`} onClick={() => save(p)} title="保存">{saved[p.id] ? "保存済" : "保存"}</button>
                 <button className="report-btn" onClick={() => user ? setReportFor(p) : onLogin()} title="通報">⚑ 通報</button>
               </div>
             </div>
@@ -2249,7 +2247,7 @@ function AdminPanel({ isAdmin, onBack }) {
             <div className={`admin-card ${p.hidden ? "hidden-post" : ""}`} key={p.id}>
               <div className="admin-info">
                 <div className="lib-title">{p.title} {p.hidden && <span className="post-hidden-tag">非表示中</span>}</div>
-                <div className="lib-meta"><span>作: {p.ownerName || "匿名"}</span><span className="lib-dot">·</span><span className="report-count">通報 {p.reportCount || 0}</span><span className="lib-dot">·</span><span>♡ {p.likeCount || 0}</span></div>
+                <div className="lib-meta"><span>作: {p.ownerName || "匿名"}</span><span className="lib-dot">·</span><span className="report-count">通報 {p.reportCount || 0}</span><span className="lib-dot">·</span><span>{p.likeCount || 0}</span></div>
               </div>
               <div className="admin-actions">
                 {p.hidden
@@ -2291,7 +2289,7 @@ function Share({ code, onBack, onHome, onMine, user, cloudEnabled, onPublish, on
           <button className="btn primary" onClick={copyLink}>{copiedLink ? "コピーしました ✓" : "リンクをコピー"}</button>
         </div>
       ) : (
-        <div className="share-note">ℹ️ このファイルをGitHub Pages等で公開URLから開くと、ここに「共有リンク」が出ます（ローカルのfile://では下のコードを使ってください）。</div>
+        <div className="share-note">このファイルをGitHub Pages等で公開URLから開くと、ここに「共有リンク」が出ます（ローカルのfile://では下のコードを使ってください）。</div>
       )}
 
       <div className="share-block">
@@ -2302,7 +2300,7 @@ function Share({ code, onBack, onHome, onMine, user, cloudEnabled, onPublish, on
 
       {cloudEnabled && (
         <div className="share-block publish-block">
-          <div className="share-label">🌐 公開出題に投稿（みんなが遊べる）</div>
+          <div className="share-label">公開出題に投稿（みんなが遊べる）</div>
           {pubState === "done" ? (
             <div className="pub-done">公開しました！ <button className="btn ghost small-btn" onClick={onExplore}>公開出題を見る</button></div>
           ) : !user ? (
@@ -2530,7 +2528,7 @@ function Investigate({ data, accusations, setAccusations, accuseCircular, setAcc
     <div className="screen">
       {previewMode && (
         <div className="preview-banner">
-          👁 プレビュー中 — これは調査官に見える画面です。架空指定した数字に痕跡（⚑）が出ているか確認しましょう。採点はされません。
+          プレビュー中 — これは調査官に見える画面です。架空指定した数字に痕跡（⚑）が出ているか確認しましょう。採点はされません。
           <button className="btn ghost small-btn" onClick={onExitPreview}>作成に戻る</button>
         </div>
       )}
@@ -2570,7 +2568,7 @@ function Investigate({ data, accusations, setAccusations, accuseCircular, setAcc
                 </span>
               </div>
               <div className="invest-bench">基準: 原価率{ind.cogs[0]}–{ind.cogs[1]}% / 売掛{ind.recvDays[0]}–{ind.recvDays[1]}日 / 在庫{ind.invDays[0]}–{ind.invDays[1]}日</div>
-              {c.hint && <div className="invest-hint">💡 出題者より: {c.hint}</div>}
+              {c.hint && <div className="invest-hint">出題者より: {c.hint}</div>}
               {np > 1 && (
                 <div className="period-head-bar">
                   {labs.map((l, i) => <span key={i} className={`ph-cell ${i === np - 1 ? "cur" : ""}`}>{l}</span>)}
@@ -2870,7 +2868,7 @@ function Result({ result, onHome, onLibrary, onTip, onNextPractice, onDaily, las
       {/* 次へ（熱が冷めないうちに） */}
       <div className="next-actions">
         {onNextPractice && <button className="btn primary" onClick={() => onNextPractice(lastLevel)}>▶ 次の問題へ（同じくらいの難しさ）</button>}
-        {onDaily && <button className="btn ghost" onClick={onDaily}>🗓 今日の1問に挑戦</button>}
+        {onDaily && <button className="btn ghost" onClick={onDaily}>今日の1問に挑戦</button>}
       </div>
       <div className="result-detail">{detail.map((d, i) => <div key={i} className={`rd-line ${d.ok ? "ok" : "ng"}`}><span className="rd-icon">{d.ok ? "✓" : "✕"}</span>{d.txt}</div>)}</div>
       <div className="truth-box">
