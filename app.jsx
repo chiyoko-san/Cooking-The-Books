@@ -219,12 +219,12 @@ function clearHash() {
 // ================================================================
 
 const C = {
-  bg: "#0f1419", panel: "#18202a", panel2: "#202b38", edge: "#2f3e4e",
-  ink: "#e7eef5", dim: "#8aa0b4", faint: "#5a6f82",
-  amber: "#d9a441", teal: "#4cc6c0", red: "#e5563f", green: "#5bbf7a",
+  bg: "#ffffff", panel: "#f6f8fa", panel2: "#eef1f5", edge: "#dfe4ea",
+  ink: "#1a2230", dim: "#5a6675", faint: "#9aa4b2",
+  amber: "#1f3a5f", teal: "#1f6f8b", red: "#c0392b", green: "#2e7d52",
 };
 const MONO = "'Courier New', ui-monospace, monospace";
-const DISP = "Georgia, 'Times New Roman', serif";
+const DISP = "-apple-system, BlinkMacSystemFont, 'Hiragino Sans', 'Noto Sans JP', 'Yu Gothic', Meiryo, sans-serif";
 
 // ---- 科目スキーマ ---------------------------------------------
 // statement: pl|bs / tier: basic|detail / sign: 利益への寄与(+/-/0)
@@ -1519,10 +1519,10 @@ function MyPage({ user, profile, history, onBack, onLogin, onProfileSaved, onPla
       </div>
 
       <div className="mypage-stats">
-        <div className="ms-card"><div className="ms-v" style={{ color: "#5bbf7a" }}>{winRate}%</div><div className="ms-l">勝率</div></div>
-        <div className="ms-card"><div className="ms-v" style={{ color: "#4cc6c0" }}>{discRate}%</div><div className="ms-l">粉飾発見率</div></div>
+        <div className="ms-card"><div className="ms-v" style={{ color: "#2e7d52" }}>{winRate}%</div><div className="ms-l">勝率</div></div>
+        <div className="ms-card"><div className="ms-v" style={{ color: "#1f6f8b" }}>{discRate}%</div><div className="ms-l">粉飾発見率</div></div>
         <div className="ms-card"><div className="ms-v">{s.attempts}</div><div className="ms-l">挑戦数</div></div>
-        <div className="ms-card"><div className="ms-v" style={{ color: avgScore >= 0 ? "#5bbf7a" : "#e5563f" }}>{avgScore >= 0 ? "+" : ""}{avgScore}</div><div className="ms-l">平均スコア</div></div>
+        <div className="ms-card"><div className="ms-v" style={{ color: avgScore >= 0 ? "#2e7d52" : "#c0392b" }}>{avgScore >= 0 ? "+" : ""}{avgScore}</div><div className="ms-l">平均スコア</div></div>
       </div>
       <div className="mypage-sub">
         <span>勝 {s.wins}</span><span>分 {s.draws}</span><span>負 {s.loses}</span>
@@ -1587,8 +1587,8 @@ function MyPage({ user, profile, history, onBack, onLogin, onProfileSaved, onPla
 function LocalStatBlock({ local }) {
   return (
     <div className="mypage-stats">
-      <div className="ms-card"><div className="ms-v" style={{ color: "#5bbf7a" }}>{local.wins}</div><div className="ms-l">勝利数</div></div>
-      <div className="ms-card"><div className="ms-v" style={{ color: "#4cc6c0" }}>{local.discRate}%</div><div className="ms-l">発見率</div></div>
+      <div className="ms-card"><div className="ms-v" style={{ color: "#2e7d52" }}>{local.wins}</div><div className="ms-l">勝利数</div></div>
+      <div className="ms-card"><div className="ms-v" style={{ color: "#1f6f8b" }}>{local.discRate}%</div><div className="ms-l">発見率</div></div>
       <div className="ms-card"><div className="ms-v">{local.attempts}</div><div className="ms-l">挑戦数</div></div>
     </div>
   );
@@ -2077,13 +2077,13 @@ function Builder({ companies, setCompanies, internalTxns, setInternalTxns, fakes
 // ================================================================
 // ===== 練習モード（レベル選択） =====
 function Practice({ onStart, onBack }) {
-  const tierColor = { "初級": "#5bbf7a", "中級": "#4cc6c0", "上級": "#d9a441", "超級": "#e5563f", "最難級": "#b15be0" };
+  const tierColor = { "初級": "#2e7d52", "中級": "#1f6f8b", "上級": "#1f3a5f", "超級": "#c0392b", "最難級": "#b15be0" };
   return (
     <div className="screen">
       <div className="section-head"><h2 className="h2">練習モード</h2><p className="muted">初級から超級まで段階別。やさしい入口から、KDDI事件型の循環取引まで。各段位をクリアして称号を集めよう。数字が苦手でも初級から大丈夫。</p></div>
       <div className="practice-list">
         {PRACTICE_LEVELS.map((lv) => (
-          <button className="practice-card" key={lv.id} onClick={() => onStart(lv)} style={{ borderLeftColor: tierColor[lv.tier] || "#2f3e4e", borderLeftWidth: 4 }}>
+          <button className="practice-card" key={lv.id} onClick={() => onStart(lv)} style={{ borderLeftColor: tierColor[lv.tier] || "#dfe4ea", borderLeftWidth: 4 }}>
             <div className="pc-badge" style={{ borderColor: tierColor[lv.tier], color: tierColor[lv.tier] }}>{lv.id}</div>
             <div className="pc-body">
               <div className="pc-name">{lv.name}{lv.clean && <span className="pc-clean">シロ</span>}{lv.tactics === null && <span className="pc-real">実戦</span>}{lv.generator && <span className="pc-elite">CF・複数期</span>}</div>
@@ -2340,7 +2340,7 @@ function MineList({ mine, onBack, onShare, onRemove }) {
           {mine.map((e) => (
             <div className="lib-card" key={e.mid}>
               <div className="lib-card-main" onClick={() => onShare(e)}>
-                <div className="lib-diff" style={{ color: e.clean ? "#5bbf7a" : "#e5563f", borderColor: e.clean ? "#5bbf7a" : "#e5563f", fontSize: 12 }}>{e.clean ? "健全" : "粉飾"}</div>
+                <div className="lib-diff" style={{ color: e.clean ? "#2e7d52" : "#c0392b", borderColor: e.clean ? "#2e7d52" : "#c0392b", fontSize: 12 }}>{e.clean ? "健全" : "粉飾"}</div>
                 <div className="lib-info">
                   <div className="lib-title">{e.title}{e.hasFx && <span className="lib-fx">為替</span>}{e.periodCount > 1 && <span className="lib-period">{e.periodCount}期</span>}</div>
                   <div className="lib-meta"><span>{new Date(e.createdAt).toLocaleString("ja-JP", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" })}</span></div>
@@ -2473,7 +2473,7 @@ function GroupDiagram({ companies, internalTxns }) {
       </div>
       <svg viewBox={`0 0 ${W} ${H}`} className="gd-svg" preserveAspectRatio="xMidYMid meet">
         <defs>
-          <marker id="ah" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#4cc6c0" /></marker>
+          <marker id="ah" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#1f6f8b" /></marker>
         </defs>
         {/* 資本関係の線 */}
         {subs.map((s) => {
@@ -2486,8 +2486,8 @@ function GroupDiagram({ companies, internalTxns }) {
           const mx = (x1 + x2) / 2 + (y1 === y2 ? 0 : 26), my = (y1 + y2) / 2;
           return (
             <g key={"fl" + ar.key}>
-              <path d={`M${x1},${y1} Q${mx},${my} ${x2},${y2}`} fill="none" stroke="#4cc6c0" strokeWidth="1.8" markerEnd="url(#ah)" opacity="0.9" />
-              <text x={mx} y={my - 4} fill="#4cc6c0" fontSize="11" fontFamily="'Courier New', monospace" textAnchor="middle">¥{fmt(ar.amount)}</text>
+              <path d={`M${x1},${y1} Q${mx},${my} ${x2},${y2}`} fill="none" stroke="#1f6f8b" strokeWidth="1.8" markerEnd="url(#ah)" opacity="0.9" />
+              <text x={mx} y={my - 4} fill="#1f6f8b" fontSize="11" fontFamily="'Courier New', monospace" textAnchor="middle">¥{fmt(ar.amount)}</text>
             </g>
           );
         })}
@@ -2498,9 +2498,9 @@ function GroupDiagram({ companies, internalTxns }) {
           return (
             <g key={"box" + c.cid}>
               <rect x={p.x - boxW / 2} y={p.y - boxH / 2} width={boxW} height={boxH} rx="8"
-                fill={isParent ? "#202b38" : "#18202a"} stroke={isParent ? "#d9a441" : "#2f3e4e"} strokeWidth={isParent ? "2" : "1.5"} />
-              <text x={p.x} y={p.y - 4} fill="#e7eef5" fontSize="13" fontFamily="Georgia, serif" textAnchor="middle" fontWeight="bold">{c.name}</text>
-              <text x={p.x} y={p.y + 13} fill="#8aa0b4" fontSize="10" fontFamily="'Courier New', monospace" textAnchor="middle">{INDUSTRIES[c.industry].icon} {isParent ? "親会社" : "子会社"}{c.currency !== "JPY" ? " / " + CURRENCIES[c.currency].sym : ""}</text>
+                fill={isParent ? "#eef1f5" : "#f6f8fa"} stroke={isParent ? "#1f3a5f" : "#dfe4ea"} strokeWidth={isParent ? "2" : "1.5"} />
+              <text x={p.x} y={p.y - 4} fill="#1a2230" fontSize="13" fontFamily="-apple-system, sans-serif" textAnchor="middle" fontWeight="bold">{c.name}</text>
+              <text x={p.x} y={p.y + 13} fill="#5a6675" fontSize="10" fontFamily="'Courier New', monospace" textAnchor="middle">{INDUSTRIES[c.industry].icon} {isParent ? "親会社" : "子会社"}{c.currency !== "JPY" ? " / " + CURRENCIES[c.currency].sym : ""}</text>
             </g>
           );
         })}
@@ -2713,10 +2713,10 @@ function TrendChart({ company }) {
   const labs = periodLabels(np);
   // 表示する系列（金額系と、比率系を分けると分かりやすい）
   const series = [
-    { key: "sales", label: "売上高", color: "#4cc6c0", get: (f) => num(f, "sales") },
-    { key: "op", label: "営業利益", color: "#5bbf7a", get: (f) => opProfit(f) },
-    { key: "receivables", label: "売掛金", color: "#d9a441", get: (f) => num(f, "receivables") },
-    { key: "inventory", label: "棚卸資産", color: "#e5563f", get: (f) => num(f, "inventory") },
+    { key: "sales", label: "売上高", color: "#1f6f8b", get: (f) => num(f, "sales") },
+    { key: "op", label: "営業利益", color: "#2e7d52", get: (f) => opProfit(f) },
+    { key: "receivables", label: "売掛金", color: "#1f3a5f", get: (f) => num(f, "receivables") },
+    { key: "inventory", label: "棚卸資産", color: "#c0392b", get: (f) => num(f, "inventory") },
   ];
   const W = 660, H = 240, padL = 50, padR = 16, padT = 16, padB = 34;
   const plotW = W - padL - padR, plotH = H - padT - padB;
@@ -2739,13 +2739,13 @@ function TrendChart({ company }) {
           const yy = y(v);
           return (
             <g key={i}>
-              <line x1={padL} y1={yy} x2={W - padR} y2={yy} stroke="#2f3e4e" strokeWidth="1" strokeDasharray="2 3" />
-              <text x={padL - 6} y={yy + 3} fill="#5a6f82" fontSize="9" fontFamily="'Courier New', monospace" textAnchor="end">{fmt(v)}</text>
+              <line x1={padL} y1={yy} x2={W - padR} y2={yy} stroke="#dfe4ea" strokeWidth="1" strokeDasharray="2 3" />
+              <text x={padL - 6} y={yy + 3} fill="#9aa4b2" fontSize="9" fontFamily="'Courier New', monospace" textAnchor="end">{fmt(v)}</text>
             </g>
           );
         })}
         {/* 期ラベル */}
-        {labs.map((l, i) => <text key={i} x={x(i)} y={H - 12} fill={i === np - 1 ? "#d9a441" : "#8aa0b4"} fontSize="11" fontFamily="'Courier New', monospace" textAnchor="middle">{l}</text>)}
+        {labs.map((l, i) => <text key={i} x={x(i)} y={H - 12} fill={i === np - 1 ? "#1f3a5f" : "#5a6675"} fontSize="11" fontFamily="'Courier New', monospace" textAnchor="middle">{l}</text>)}
         {/* 各系列の折れ線 */}
         {series.map((s) => {
           const pts = periods.map((f, i) => `${x(i)},${y(s.get(f))}`).join(" ");
