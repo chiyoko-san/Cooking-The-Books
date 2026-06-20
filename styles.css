@@ -627,3 +627,27 @@ html, body { max-width: 100%; overflow-x: hidden; }
 .cf-flag.on { color: var(--red); font-weight: 600; }
 .pc-elite { font-size: var(--fs-xs); background: var(--red); color: var(--white); padding: 0 var(--sp-2); border-radius: var(--r-sm); margin-left: var(--sp-2); }
 .pc-tier { font-size: var(--fs-xs); font-family: 'Courier New', monospace; margin: 0 0 var(--sp-1); }
+
+/* ===== 結果: 決算表の復習（折りたたみ） ===== */
+.fs-review { margin-bottom: var(--sp-4); }
+.fs-toggle { width: 100%; text-align: left; background: var(--surface); border: none; border-radius: var(--r-lg); padding: var(--sp-3) var(--sp-4); cursor: pointer; font-family: 'Courier New', monospace; font-size: var(--fs-md); color: var(--text); display: flex; align-items: center; justify-content: space-between; }
+.fs-toggle:hover { background: var(--surface-2); }
+.fs-toggle .fs-arrow { color: var(--text-dim); transition: transform .15s; }
+.fs-toggle.open .fs-arrow { transform: rotate(90deg); }
+.fs-body { background: var(--surface); border-radius: 0 0 var(--r-lg) var(--r-lg); padding: var(--sp-3) var(--sp-4) var(--sp-4); margin-top: 2px; }
+.fs-co { margin-bottom: var(--sp-4); }
+.fs-co:last-child { margin-bottom: 0; }
+.fs-co-name { font-family: -apple-system, BlinkMacSystemFont, 'Hiragino Sans', 'Noto Sans JP', 'Yu Gothic', Meiryo, sans-serif; font-size: var(--fs-lg); font-weight: bold; margin-bottom: var(--sp-2); padding-bottom: var(--sp-1); border-bottom: 1px solid var(--border); }
+.fs-stmt-h { font-family: 'Courier New', monospace; font-size: var(--fs-xs); color: var(--text-dim); letter-spacing: 1px; margin: var(--sp-3) 0 var(--sp-1); }
+.fs-table { width: 100%; border-collapse: collapse; }
+.fs-table td { padding: var(--sp-1) var(--sp-2); font-family: 'Courier New', monospace; font-size: var(--fs-base); border-bottom: 1px dotted var(--border); }
+.fs-table td.fs-label { color: var(--text-muted); }
+.fs-table td.fs-val { text-align: right; color: var(--text); }
+.fs-table tr.fs-faked td { background: rgba(192,57,43,.08); }
+.fs-table tr.fs-faked td.fs-label { color: var(--red); font-weight: bold; }
+.fs-table tr.fs-faked td.fs-val { color: var(--red); font-weight: bold; }
+.fs-faked-mark { font-size: var(--fs-xs); color: var(--red); margin-left: var(--sp-1); }
+.fs-table tr.fs-sum td { border-top: 1px solid var(--border); border-bottom: none; font-weight: bold; padding-top: var(--sp-2); }
+.fs-table tr.fs-sum td.fs-label { color: var(--text); }
+.fs-legend { font-family: 'Courier New', monospace; font-size: var(--fs-xs); color: var(--text-muted); margin-top: var(--sp-3); display: flex; align-items: center; gap: var(--sp-1); }
+.fs-legend .fs-chip { display: inline-block; width: 12px; height: 12px; border-radius: 3px; background: rgba(192,57,43,.18); }

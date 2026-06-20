@@ -2840,6 +2840,54 @@ function explainFake(company, key) {
   }
 }
 
+// 結果画面: 出題された決算表のおさらい（折りたたみ・架空科目を赤強調）
+function FsReview({ truth }) {
+  const [open, setOpen] = React.useState(false);
+  const companies = truth.companies || [];
+  if (companies.length === 0) return null;
+  // この (cid,key) が架空計上されたか
+  const isFaked = (cid, key) => (truth.trueFakes || []).some((f) => f.cid === cid && f.key === key);
+  const hasAnyFake = (truth.trueFakes || []).length > 0;
+  const rowFor = (c, key) => {
+    const faked = isFaked(c.cid, key);
+    return (
+      <tr key={key} className={faked ? "fs-faked" : ""}>
+        <td className="fs-label">{A_BY_KEY[key]?.label || key}{faked && <span className="fs-faked-mark">●架空</span>}</td>
+        <td className="fs-val">{c.currency && c.currency !== "JPY" ? CURRENCIES[c.currency].sym : "¥"}{fmt(num(c.fin, key))}</td>
+      </tr>
+    );
+  };
+  return (
+    <div className="fs-review">
+      <button className={`fs-toggle ${open ? "open" : ""}`} onClick={() => setOpen(!open)}>
+        <span>出題された決算表を見る（おさらい）</span>
+        <span className="fs-arrow">▶</span>
+      </button>
+      {open && (
+        <div className="fs-body">
+          {companies.map((c) => (
+            <div className="fs-co" key={c.cid}>
+              <div className="fs-co-name">{c.name}</div>
+              <div className="fs-stmt-h">損益計算書 P/L</div>
+              <table className="fs-table"><tbody>
+                {PL_KEYS.filter((k) => num(c.fin, k) !== 0 || isFaked(c.cid, k)).map((k) => rowFor(c, k))}
+                <tr className="fs-sum"><td className="fs-label">当期純利益</td><td className="fs-val">¥{fmt(netIncome(c.fin))}</td></tr>
+              </tbody></table>
+              <div className="fs-stmt-h">貸借対照表 B/S</div>
+              <table className="fs-table"><tbody>
+                {BS_ASSET_KEYS.filter((k) => num(c.fin, k) !== 0 || isFaked(c.cid, k)).map((k) => rowFor(c, k))}
+                {BS_LIAB_KEYS.filter((k) => num(c.fin, k) !== 0 || isFaked(c.cid, k)).map((k) => rowFor(c, k))}
+                <tr className="fs-sum"><td className="fs-label">資産合計</td><td className="fs-val">¥{fmt(totalAssets(c.fin))}</td></tr>
+              </tbody></table>
+            </div>
+          ))}
+          {hasAnyFake && <div className="fs-legend"><span className="fs-chip"></span> 赤い行が架空計上された科目です</div>}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function Result({ result, onHome, onLibrary, onTip, onNextPractice, onDaily, lastLevel }) {
   const { score, detail, truth } = result;
   const nameOf = (cid) => truth.companies.find((c) => c.cid === cid)?.name || cid;
@@ -2883,6 +2931,9 @@ function Result({ result, onHome, onLibrary, onTip, onNextPractice, onDaily, las
           </>
         )}
       </div>
+
+      {/* 出題された決算表のおさらい */}
+      <FsReview truth={truth} />
 
       {/* おさらい: 理由つき解説 */}
       {!truth.cleanCo && truth.trueFakes.length > 0 && (
