@@ -242,7 +242,7 @@ html, body { max-width: 100%; overflow-x: hidden; }
 .invest-table tr.accd { background: rgba(31,58,95,.16); }
 .invest-table tr.liab .it-label { color: var(--text-dim); }
 .invest-table td { padding: var(--sp-2) var(--sp-1); border-bottom: 1px dotted var(--border); font-family: 'Courier New', ui-monospace, monospace; font-size: var(--fs-base); cursor: pointer; }
-.it-mark { width: 20px; color: var(--gold); } .it-label { color: var(--text-muted); display:flex; align-items:center; gap: var(--sp-1); } .it-val { text-align: right; }
+.it-mark { width: 52px; color: var(--gold); } .it-label { color: var(--text-muted); display:flex; align-items:center; gap: var(--sp-1); } .it-val { text-align: right; }
 .it-tip { width: 15px; height: 15px; border-radius: 50%; border: 1px solid var(--text-dim); background: transparent; color: var(--text-dim); font-size: var(--fs-xs); cursor: pointer; flex-shrink: 0; padding: 0; line-height: 1; }
 .it-tip:hover { border-color: var(--teal); color: var(--teal); }
 .inv-derived { font-family: 'Courier New', ui-monospace, monospace; font-size: var(--fs-sm); color: var(--text); text-align: right; padding: var(--sp-1) var(--sp-1); border-bottom: 1px solid var(--border); }
@@ -656,3 +656,7 @@ html, body { max-width: 100%; overflow-x: hidden; }
 .share-result-row { display: flex; align-items: center; gap: var(--sp-3); flex-wrap: wrap; margin-bottom: var(--sp-4); }
 .share-result-btn { white-space: nowrap; }
 .share-result-msg { font-family: 'Courier New', monospace; font-size: var(--fs-sm); color: var(--green); line-height: 1.5; word-break: break-all; }
+
+/* ===== 告発中バッジ ===== */
+.it-mark { white-space: nowrap; }
+.accuse-badge { display: inline-block; font-family: 'Courier New', monospace; font-size: var(--fs-xs); font-weight: bold; color: var(--red); border: 1.5px solid var(--red); border-radius: var(--r-sm); padding: 0 var(--sp-1); background: rgba(192,57,43,.08); letter-spacing: 1px; line-height: 1.5; }

@@ -2603,7 +2603,7 @@ function Investigate({ data, accusations, setAccusations, accuseCircular, setAcc
               <table className="invest-table"><tbody>
                 {plKeys.map((k) => (
                   <tr key={k} className={isAcc(c.cid, k) ? "accd" : ""}>
-                    <td className="it-mark" onClick={() => toggle(c.cid, k)}>{isAcc(c.cid, k) ? "☞" : ""}</td>
+                    <td className="it-mark" onClick={() => toggle(c.cid, k)}>{isAcc(c.cid, k) ? <span className="accuse-badge">指摘中</span> : ""}</td>
                     <td className="it-label"><span onClick={() => toggle(c.cid, k)}>{A_BY_KEY[k].label}</span><button className="it-tip" onClick={() => onTip({ label: A_BY_KEY[k].label, desc: A_BY_KEY[k].desc })}>?</button></td>
                     <td className={`it-val ${np > 1 ? "multi" : ""}`} onClick={() => toggle(c.cid, k)}>{valCells(k)}</td>
                   </tr>
@@ -2615,14 +2615,14 @@ function Investigate({ data, accusations, setAccusations, accuseCircular, setAcc
               <table className="invest-table"><tbody>
                 {assetKeys.map((k) => (
                   <tr key={k} className={isAcc(c.cid, k) ? "accd" : ""}>
-                    <td className="it-mark" onClick={() => toggle(c.cid, k)}>{isAcc(c.cid, k) ? "☞" : ""}</td>
+                    <td className="it-mark" onClick={() => toggle(c.cid, k)}>{isAcc(c.cid, k) ? <span className="accuse-badge">指摘中</span> : ""}</td>
                     <td className="it-label"><span onClick={() => toggle(c.cid, k)}>{A_BY_KEY[k].label}</span><button className="it-tip" onClick={() => onTip({ label: A_BY_KEY[k].label, desc: A_BY_KEY[k].desc })}>?</button></td>
                     <td className={`it-val ${np > 1 ? "multi" : ""}`} onClick={() => toggle(c.cid, k)}>{valCells(k)}</td>
                   </tr>
                 ))}
                 {liabKeys.map((k) => (
                   <tr key={k} className={`liab ${isAcc(c.cid, k) ? "accd" : ""}`}>
-                    <td className="it-mark" onClick={() => toggle(c.cid, k)}>{isAcc(c.cid, k) ? "☞" : ""}</td>
+                    <td className="it-mark" onClick={() => toggle(c.cid, k)}>{isAcc(c.cid, k) ? <span className="accuse-badge">指摘中</span> : ""}</td>
                     <td className="it-label"><span onClick={() => toggle(c.cid, k)}>{A_BY_KEY[k].label}</span><button className="it-tip" onClick={() => onTip({ label: A_BY_KEY[k].label, desc: A_BY_KEY[k].desc })}>?</button></td>
                     <td className={`it-val ${np > 1 ? "multi" : ""}`} onClick={() => toggle(c.cid, k)}>{valCells(k)}</td>
                   </tr>
