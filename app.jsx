@@ -201,6 +201,16 @@ function baseSiteUrl() {
 function makeShareLink(code) {
   return baseSiteUrl() + "#play=" + encodeURIComponent(code);
 }
+// 成績共有リンク（結果のみ。出題の答えは含めない）
+function makeResultLink(payload) {
+  return baseSiteUrl() + "#result=" + encodeURIComponent(enc(payload));
+}
+function readResultHash() {
+  const h = location.hash || "";
+  const m = h.match(/[#&]result=([^&]+)/);
+  if (!m) return null;
+  try { return dec(decodeURIComponent(m[1])); } catch { return null; }
+}
 // URLの#からプレイ用コードを取り出す
 function readHashCode() {
   const h = location.hash || "";
@@ -905,6 +915,17 @@ function App() {
     clearHash();
   }, []);
 
+  // URLの#result=... があれば、共有された成績画面を表示
+  const [sharedResult, setSharedResult] = useState(null);
+  useEffect(() => {
+    const r = readResultHash();
+    if (r && typeof r.score === "number") {
+      setSharedResult(r);
+      setRoute("sharedResult");
+      clearHash();
+    }
+  }, []);
+
   function resetBuild() {
     setCompanies([makeCompany("parent", 0, "manufacturing"), makeCompany("sub", 1, "retail")]);
     setInternalTxns([]); setFakes([]); setIsClean(false); setPeriodCount(1); setCode(""); setPreviewMode(false);
@@ -1159,6 +1180,7 @@ function App() {
         {route === "admin" && <AdminPanel isAdmin={isAdmin} onBack={() => setRoute("home")} />}
         {route === "mypage" && <MyPage user={user} profile={profile} history={history} onBack={() => setRoute("home")} onLogin={() => setRoute("login")} onProfileSaved={setProfile} onPlay={playPost} />}
         {route === "rules" && <Rules onBack={() => setRoute("home")} onTip={setTip} />}
+        {route === "sharedResult" && <SharedResult data={sharedResult} onHome={() => setRoute("home")} onPractice={() => setRoute("practice")} />}
         {route === "build" && (
           <Builder companies={companies} setCompanies={setCompanies} internalTxns={internalTxns} setInternalTxns={setInternalTxns}
             fakes={fakes} setFakes={setFakes} isClean={isClean} setIsClean={setIsClean} onDone={buildCode} onTip={setTip}
@@ -1175,7 +1197,7 @@ function App() {
             accuseCircular={accuseCircular} setAccuseCircular={setAccuseCircular} accuseFx={accuseFx} toggleFxAccuse={toggleFxAccuse} onSubmit={grade} onTip={setTip}
             previewMode={previewMode} onExitPreview={() => { setPreviewMode(false); setRoute("build"); }} />
         )}
-        {route === "result" && result && <Result result={result} onHome={() => setRoute("home")} onLibrary={() => setRoute("library")} onTip={setTip} onNextPractice={nextPractice} onDaily={startDaily} lastLevel={lastLevel} />}
+        {route === "result" && result && <Result result={result} onHome={() => setRoute("home")} onLibrary={() => setRoute("library")} onTip={setTip} onNextPractice={nextPractice} onDaily={startDaily} lastLevel={lastLevel} playerName={(profile && profile.name) || (user && user.displayName) || ""} />}
 
         <footer className="site-footer">
           <div className="footer-cols">
@@ -2888,8 +2910,55 @@ function FsReview({ truth }) {
   );
 }
 
-function Result({ result, onHome, onLibrary, onTip, onNextPractice, onDaily, lastLevel }) {
+// 共有された成績の表示画面（#result= で開かれる）
+function SharedResult({ data, onHome, onPractice }) {
+  if (!data) return null;
+  const score = data.score || 0;
+  let verdict, vmsg;
+  if (score >= 30) { verdict = "完全勝利・調査官"; vmsg = "嘘も真実も、過たず見抜いた。"; }
+  else if (score >= 10) { verdict = "調査官の勝ち"; vmsg = "嘘の核心を捉えた。"; }
+  else if (score >= -5) { verdict = "引き分け圏"; vmsg = "詰めが甘い。逃げ道を残した。"; }
+  else { verdict = "粉飾者の勝ち"; vmsg = "数字の罠に飲まれた。"; }
+  const who = data.name ? `${data.name} さんの成績` : "ある調査官の成績";
+  return (
+    <div className="screen">
+      <div className="result-head">
+        <div className="muted small" style={{ marginBottom: 8 }}>{who}</div>
+        <div className="result-verdict">{verdict}</div>
+        <div className="result-score" style={{ color: score >= 0 ? C.green : C.red }}>{score >= 0 ? "+" : ""}{score}</div>
+        <div className="muted">{vmsg}</div>
+      </div>
+      {!data.clean && data.fakeTotal > 0 && (
+        <div className="encourage-box">架空科目 {data.fakeTotal} 件のうち {data.hits || 0} 件を見抜いた挑戦結果です。</div>
+      )}
+      <div className="next-actions">
+        <button className="btn primary" onClick={onPractice}>自分もやってみる（練習モードへ）</button>
+        <button className="btn ghost" onClick={onHome}>トップを見る</button>
+      </div>
+      <div className="muted small" style={{ textAlign: "center", marginTop: 12 }}>
+        決算書の粉飾を見抜く推理ゲーム「連結粉飾 対局」
+      </div>
+    </div>
+  );
+}
+
+function Result({ result, onHome, onLibrary, onTip, onNextPractice, onDaily, lastLevel, playerName }) {
   const { score, detail, truth } = result;
+  const [shareMsg, setShareMsg] = React.useState("");
+  function shareResult() {
+    const payload = {
+      score, hits: result.hits || 0, fakeTotal: result.fakeTotal || 0,
+      clean: !!truth.cleanCo, name: playerName || "", title: (truth.companies && truth.companies[0] && truth.companies[0].name) || "",
+    };
+    const url = makeResultLink(payload);
+    try {
+      navigator.clipboard.writeText(url);
+      setShareMsg("成績リンクをコピーしました。Xなどに貼って共有できます。");
+    } catch {
+      setShareMsg(url);
+    }
+    setTimeout(() => setShareMsg(""), 4000);
+  }
   const nameOf = (cid) => truth.companies.find((c) => c.cid === cid)?.name || cid;
   let verdict, vmsg;
   if (score >= 30) { verdict = "完全勝利・調査官"; vmsg = "嘘も真実も、過たず見抜いた。"; }
@@ -2917,6 +2986,10 @@ function Result({ result, onHome, onLibrary, onTip, onNextPractice, onDaily, las
       <div className="next-actions">
         {onNextPractice && <button className="btn primary" onClick={() => onNextPractice(lastLevel)}>▶ 次の問題へ（同じくらいの難しさ）</button>}
         {onDaily && <button className="btn ghost" onClick={onDaily}>今日の1問に挑戦</button>}
+      </div>
+      <div className="share-result-row">
+        <button className="btn ghost share-result-btn" onClick={shareResult}>この成績を共有する</button>
+        {shareMsg && <span className="share-result-msg">{shareMsg}</span>}
       </div>
       <div className="result-detail">{detail.map((d, i) => <div key={i} className={`rd-line ${d.ok ? "ok" : "ng"}`}><span className="rd-icon">{d.ok ? "✓" : "✕"}</span>{d.txt}</div>)}</div>
       <div className="truth-box">

@@ -651,3 +651,8 @@ html, body { max-width: 100%; overflow-x: hidden; }
 .fs-table tr.fs-sum td.fs-label { color: var(--text); }
 .fs-legend { font-family: 'Courier New', monospace; font-size: var(--fs-xs); color: var(--text-muted); margin-top: var(--sp-3); display: flex; align-items: center; gap: var(--sp-1); }
 .fs-legend .fs-chip { display: inline-block; width: 12px; height: 12px; border-radius: 3px; background: rgba(192,57,43,.18); }
+
+/* ===== 結果: 成績の共有 ===== */
+.share-result-row { display: flex; align-items: center; gap: var(--sp-3); flex-wrap: wrap; margin-bottom: var(--sp-4); }
+.share-result-btn { white-space: nowrap; }
+.share-result-msg { font-family: 'Courier New', monospace; font-size: var(--fs-sm); color: var(--green); line-height: 1.5; word-break: break-all; }
